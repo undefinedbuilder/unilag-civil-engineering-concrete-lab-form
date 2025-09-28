@@ -7,9 +7,9 @@
   --accent-2:#2563eb;
   --ring:#93c5fd;
   --border:#e2e8f0;
-  --danger:#e11d48; /* red for required asterisk */
-  --ok:#166534;     /* green for success text */
-  --err:#b91c1c;    /* red for error text */
+  --danger:#e11d48;
+  --ok:#166534;
+  --err:#b91c1c;
 }
 
 *{box-sizing:border-box}
@@ -57,12 +57,11 @@ label{display:flex;flex-direction:column;font-size:.9rem;gap:6px}
 .field-label{display:inline-flex;align-items:baseline;gap:4px}
 .req{color:var(--danger);font-weight:700;line-height:1}
 
-/* Make all inputs (including date) and selects full width */
+/* inputs full width */
 input,select,textarea{
   width:100%;
   max-width:100%;
   box-sizing:border-box;
-
   padding:10px 12px;border:1px solid var(--border);border-radius:10px;
   font:inherit;background:#fff;outline:none;transition:border .15s, box-shadow .15s;
 }
@@ -72,19 +71,33 @@ input:focus,select:focus,textarea:focus{
   box-shadow:0 0 0 4px var(--ring);
 }
 
-/* Actions: buttons responsive */
+/* span full width in grids */
+.full{grid-column:1 / -1}
+
+/* live metric display */
+.metric-row{
+  display:flex;align-items:center;gap:8px;margin-top:6px;
+  padding:8px 12px;border:1px dashed var(--border);border-radius:10px;background:#fbfdff;
+}
+.metric-label{font-weight:600;color:#0f172a}
+.metric-value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+/* actions */
 .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
 button{
   background:linear-gradient(90deg,var(--accent),var(--accent-2));
   color:#fff;border:none;border-radius:12px;
-  padding:12px 16px;font-weight:600;cursor:pointer;
+  padding:14px 18px;
+  font-weight:700;
+  font-size:1.05rem;
+  cursor:pointer;
   box-shadow:0 8px 16px rgba(37,99,235,.25);
-  flex:1 1 auto;           /* allow buttons to grow/shrink */
+  flex:1 1 auto;
   text-align:center;
 }
 button:disabled{opacity:.6;cursor:not-allowed}
 
-/* Secondary (Retry Save) */
+/* secondary */
 .btn-secondary{
   background:#ffffff;
   color:var(--accent-2);
@@ -92,18 +105,18 @@ button:disabled{opacity:.6;cursor:not-allowed}
   box-shadow:none;
 }
 
-/* Mobile: stack buttons full width */
+/* mobile buttons full width */
 @media (max-width:600px){
   .actions{flex-direction:column;align-items:stretch}
   .actions button{width:100%}
 }
 
-/* Status text */
+/* status */
 .status{margin:0}
 .status.ok{color:var(--ok)}
 .status.err{color:var(--err)}
 
 .footer{margin:28px 0 8px;text-align:center;color:var(--muted);font-size:.9rem}
 
-/* Utility */
+/* utility */
 .hidden{display:none}
