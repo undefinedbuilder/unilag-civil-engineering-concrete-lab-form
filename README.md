@@ -1,61 +1,134 @@
-# UNILAG Concrete Lab – Mix Intake Form
+# UNILAG Concrete Lab – Mix Intake & PDF Report System
 
-A free web application for the **Department of Civil and Environmental Engineering, Concrete Laboratory, University of Lagos**.  
+A free web application built for the  
+**Department of Civil and Environmental Engineering, Concrete Laboratory, University of Lagos.**
 
-This app allows clients and researchers to submit details of their concrete mix proportions, automatically save the data to a Google Sheet, and download a PDF report with UNILAG’s letterhead and logo.  
+This system allows clients and researchers to submit **concrete mix proportions** through a form. Submitted data is:
 
-If saving to Google Sheets fails (e.g., network or authentication issues), the app **still generates the PDF** and provides a **Retry Save** button to attempt saving again without retyping the form.
+- ✅ Saved into a **Google Sheet** (for lab records)  
+- ✅ Exported into a professional **PDF report** (with UNILAG logo & letterhead)  
+- ✅ Automatically downloaded to the client’s device  
+
+Even if saving to Google Sheets fails, the app **still generates the PDF** and provides a **Retry Save** button so staff can re-submit the same data without retyping the form.
 
 ---
 
 ## ✨ Features
 
-- **Form Sections**
-  - Client / Project Details (with Date field, defaults to today)
-  - Cement Information (Brand, Manufacturer’s Cement Type, Cement Type)
-  - Superplasticizer Information (Name only)
-  - Mix Composition (Cement, Slag, Fly Ash, Silica Fume, Limestone Filler, Water, Superplasticizer dosage, Coarse Aggregate, Fine Aggregate — all in kg/m³)
-  - Slump / Workability (mm)
-  - Age & Target Strength Information (Age in days, Target Compressive Strength in MPa)
-  - Additional Notes (enter **Nil** if none)
+### 🔹 Form Sections
+The form is divided into clear sections:
 
-- **Validation**
-  - All fields are required.
-  - Numeric fields must be filled (use **0** where a component is not included).
-  - Notes must contain text or “Nil”.
-  - Form cannot submit unless all sections are filled.
+1. **Client / Project Details**
+   - Client / Requester Name  
+   - Project / Site  
+   - Contact Email  
+   - Contact Phone  
+   - **Crushing Date** (defaults to today, always full-width)
 
-- **Submission & Storage**
-  - Data is sent to a Vercel serverless function (`/api/submit`) and stored in a Google Sheet.
-  - A derived **water/cement (w/c) ratio** is calculated and stored.
+2. **Cement Information**
+   - Cement Brand (Dangote, Lafarge, BUA)  
+   - Manufacturer’s Cement Type (options update dynamically by brand)  
+   - Cement Type (CEM I / CEM II options)
 
-- **PDF Generation**
-  - Automatically downloaded after submission.
-  - Header includes:
-    - UNILAG Logo
-    - `DEPARTMENT OF CIVIL AND ENVIRONMENTAL ENGINEERING`
-    - `FACULTY OF ENGINEERING`
-    - `CONCRETE LABORATORY`
-  - Body includes:
-    - All submitted data
-    - Derived w/c ratio
-    - Notes
-  - Footer: “Generated electronically by the Concrete Laboratory, University of Lagos.”
-  - Filename format: **`<ClientName>_<Date>.pdf`**
+3. **Superplasticizer Information**
+   - Superplasticizer Name  
 
-- **Retry Save**
-  - If Google Sheets save fails, PDF still downloads.
-  - A **Retry Save** button appears, using the same data payload (no retyping required).
+4. **Mix Composition (kg/m³)**
+   - Cement  
+   - Blast Furnace Slag  
+   - Fly Ash  
+   - Silica Fume  
+   - Limestone Filler  
+   - Water  
+   - Superplasticizer dosage (kg/m³)  
+   - Coarse Aggregate  
+   - Fine Aggregate  
 
-- **User Experience**
-  - Date resets to today after each submission.
-  - Success messages shown in **green**, error messages in **red**.
+   🔹 **Live Water/Cement Ratio Display**  
+   - As the user enters water and cement, the system calculates and shows the **w/c ratio** in real-time on the webpage.
+
+5. **Slump / Workability**
+   - Slump (mm)
+
+6. **Age & Target Strength Information**
+   - Age (days)  
+   - Target Compressive Strength (MPa)  
+   - Number of Cubes to be Crushed  
+
+7. **Additional Notes**
+   - Free text (enter “Nil” if none)
+
+---
+
+### 🔹 Validation Rules
+- Every field is **required**.  
+- All numeric fields must be filled (enter **0** if not applicable).  
+- Notes must contain either text or “Nil”.  
+- The form **cannot submit** unless all fields are completed.  
+
+---
+
+### 🔹 Submission & Storage
+- On submission, data is posted to a **Vercel serverless function (`/api/submit`)**.  
+- Data is appended to a connected **Google Sheet**.  
+- A derived **water/cement ratio** is also stored in the sheet.  
+
+If saving fails:
+- ❌ An error message appears in **red**.  
+- ✅ The PDF is still generated.  
+- 🔄 A **Retry Save** button appears, allowing staff to re-attempt sending the same data.
+
+---
+
+### 🔹 PDF Report
+The PDF is auto-generated using [jsPDF](https://github.com/parallax/jsPDF).  
+It is **always one page** and includes:
+
+- **Header:**
+  - UNILAG Logo (left)
+  - Department, Faculty, and Lab name (stacked right)
+
+- **Sections:**
+  - Client & Project Info  
+  - Cement Information  
+  - Superplasticizer Information  
+  - Mix Composition  
+  - Slump / Workability  
+  - Age, Target Strength, Cube Count  
+  - Derived w/c ratio  
+  - Additional Notes  
+
+- **Office Use Only Box (bottom of page):**
+FOR OFFICE USE ONLY
+
+Crushed Compressive Strength (MPa): ______________________________
+
+Tested on: ____________________
+
+Remarks: ___________________________________________________________
+
+
+---
+
+### 🔹 User Experience
+- **Crushing Date** always resets to today after submission.  
+- **Submit button** is larger, bold, and pinned at the bottom of the form.  
+- **Retry Save** button only appears when Google Sheets save fails.  
+- Status messages:
+- ✅ Green = Success
+- ❌ Red = Error
 
 ---
 
 ## 📊 Google Sheet Setup
 
-1. Create a Google Sheet with the following headers in row 1:
-Timestamp (server) | Date | Client | Project | Email | Phone | Cement Brand | Manufacturer's Cement Type | Cement Type | SP Name |
-Cement | Slag | Fly Ash | Silica Fume | Limestone Filler | Water | SP (kg/m³) | Coarse Agg | Fine Agg |
-Slump (mm) | Age (days) | Target (MPa) | Derived w/c | Notes
+Create a Google Sheet with headers in row 1:
+
+Timestamp (server) | Crushing Date | Client | Project | Email | Phone |
+Cement Brand | Manufacturer's Cement Type | Cement Type | SP Name |
+Cement | Slag | Fly Ash | Silica Fume | Limestone Filler | Water | SP (kg/m³) |
+Coarse Agg | Fine Agg | Slump (mm) | Age (days) | Target (MPa) | Cubes Count |
+Derived w/c | Notes
+
+
+---
