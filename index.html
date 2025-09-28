@@ -106,7 +106,7 @@
         <div class="grid three">
           <label>
             <span class="field-label">Cement (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="cement" required placeholder="0" />
+            <input type="number" step="any" min="0" name="cement" id="cement" required placeholder="0" />
           </label>
           <label>
             <span class="field-label">Blast Furnace Slag (kg/m³) <sup class="req">*</sup></span>
@@ -126,7 +126,7 @@
           </label>
           <label>
             <span class="field-label">Water (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="water" required placeholder="0" />
+            <input type="number" step="any" min="0" name="water" id="water" required placeholder="0" />
           </label>
           <label>
             <span class="field-label">Superplasticizer (kg/m³) <sup class="req">*</sup></span>
@@ -140,6 +140,12 @@
             <span class="field-label">Fine Aggregate (kg/m³) <sup class="req">*</sup></span>
             <input type="number" step="any" min="0" name="fineAgg" required placeholder="0" />
           </label>
+        </div>
+
+        <!-- Live w/c ratio metric -->
+        <div class="metric-row">
+          <span class="metric-label">Derived w/c ratio:</span>
+          <span id="wcDisplay" class="metric-value">0.00</span>
         </div>
       </section>
 
