@@ -11,6 +11,9 @@
 <body>
   <main class="container">
     <header class="header">
+      <div class="logo-box">
+        <img src="/unilag-logo.png" alt="UNILAG Logo" class="logo">
+      </div>
       <div class="brand">
         <h1>The Department of Civil & Environmental Engineering</h1>
         <h2>CONCRETE LABORATORY, UNIVERSITY OF LAGOS</h2>
@@ -50,6 +53,7 @@
       <section class="card">
         <h3>Cement Information</h3>
 
+        <!-- Cement Brand (full width) -->
         <div class="grid one">
           <label>
             <span class="field-label">Cement Brand <sup class="req">*</sup></span>
@@ -62,11 +66,13 @@
           </label>
         </div>
 
+        <!-- Manufacturer’s Cement Type + Cement Type (side-by-side) -->
         <div class="grid two">
           <label>
             <span class="field-label">Manufacturer's Cement Type <sup class="req">*</sup></span>
             <select name="manufacturerCementType" id="manufacturerCementType" required disabled>
               <option value="" disabled selected>Select Manufacturer's Type</option>
+              <!-- populated by JS based on brand -->
             </select>
           </label>
 
@@ -85,7 +91,7 @@
         </div>
       </section>
 
-      <!-- Superplasticizer -->
+      <!-- Superplasticizer Name (own section, full width) -->
       <section class="card">
         <h3>Superplasticizer Information</h3>
         <div class="grid one">
@@ -139,7 +145,7 @@
         </div>
       </section>
 
-      <!-- Slump -->
+      <!-- Slump (own section, full width, BEFORE Age/Target) -->
       <section class="card">
         <h3>Slump / Workability</h3>
         <div class="grid one">
@@ -150,7 +156,7 @@
         </div>
       </section>
 
-      <!-- Age & Target -->
+      <!-- Age & Target Strength -->
       <section class="card">
         <h3>Age & Target Strength Information</h3>
         <div class="grid two">
@@ -165,7 +171,7 @@
         </div>
       </section>
 
-      <!-- Notes -->
+      <!-- Additional Notes -->
       <section class="card">
         <h3>Additional Notes</h3>
         <div class="grid one">
