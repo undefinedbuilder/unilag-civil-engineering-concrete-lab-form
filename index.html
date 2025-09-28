@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>UNILAG Concrete Laboratory – Mix Intake Form</title>
   <link rel="stylesheet" href="/style.css" />
-  <!-- jsPDF for client-side PDF generation -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </head>
 <body>
@@ -42,9 +41,11 @@
             <span class="field-label">Contact Phone <sup class="req">*</sup></span>
             <input type="tel" name="phone" required placeholder="Phone Number" />
           </label>
-          <label>
-            <span class="field-label">Date <sup class="req">*</sup></span>
-            <input type="date" name="testDate" id="testDate" required />
+
+          <!-- FULL-WIDTH on all screens -->
+          <label class="full">
+            <span class="field-label">Crushing Date <sup class="req">*</sup></span>
+            <input type="date" name="crushingDate" id="crushingDate" required />
           </label>
         </div>
       </section>
@@ -53,7 +54,6 @@
       <section class="card">
         <h3>Cement Information</h3>
 
-        <!-- Cement Brand (full width) -->
         <div class="grid one">
           <label>
             <span class="field-label">Cement Brand <sup class="req">*</sup></span>
@@ -66,13 +66,11 @@
           </label>
         </div>
 
-        <!-- Manufacturer’s Cement Type + Cement Type (side-by-side) -->
         <div class="grid two">
           <label>
             <span class="field-label">Manufacturer's Cement Type <sup class="req">*</sup></span>
             <select name="manufacturerCementType" id="manufacturerCementType" required disabled>
               <option value="" disabled selected>Select Manufacturer's Type</option>
-              <!-- populated by JS based on brand -->
             </select>
           </label>
 
@@ -91,7 +89,7 @@
         </div>
       </section>
 
-      <!-- Superplasticizer Name (own section, full width) -->
+      <!-- Superplasticizer -->
       <section class="card">
         <h3>Superplasticizer Information</h3>
         <div class="grid one">
@@ -145,7 +143,7 @@
         </div>
       </section>
 
-      <!-- Slump (own section, full width, BEFORE Age/Target) -->
+      <!-- Slump -->
       <section class="card">
         <h3>Slump / Workability</h3>
         <div class="grid one">
@@ -156,10 +154,10 @@
         </div>
       </section>
 
-      <!-- Age & Target Strength -->
+      <!-- Age & Target & No of Cubes -->
       <section class="card">
         <h3>Age & Target Strength Information</h3>
-        <div class="grid two">
+        <div class="grid three">
           <label>
             <span class="field-label">Age (days) <sup class="req">*</sup></span>
             <input type="number" step="1" min="1" name="ageDays" required placeholder="0" />
@@ -168,10 +166,14 @@
             <span class="field-label">Target Compressive Strength (MPa) <sup class="req">*</sup></span>
             <input type="number" step="any" min="0" name="targetMPa" required placeholder="0" />
           </label>
+          <label>
+            <span class="field-label">Number of cubes to be crushed <sup class="req">*</sup></span>
+            <input type="number" step="1" min="1" name="cubesCount" required placeholder="0" />
+          </label>
         </div>
       </section>
 
-      <!-- Additional Notes -->
+      <!-- Notes -->
       <section class="card">
         <h3>Additional Notes</h3>
         <div class="grid one">
@@ -190,12 +192,10 @@
     </form>
 
     <footer class="footer">
-      <p>&copy; <span id="year"></span> Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.</p>
+      <p>&copy; <span id="year"></span>Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.</p>
     </footer>
   </main>
 
   <script src="/script.js" defer></script>
 </body>
 </html>
-
-
