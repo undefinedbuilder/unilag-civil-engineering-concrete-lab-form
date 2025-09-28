@@ -35,6 +35,14 @@ function sanitizeFilename(name) {
     .trim();
 }
 
+// Compute w/c ratio safely
+function computeWc(water, cement) {
+  const w = Number(water);
+  const c = Number(cement);
+  if (!isFinite(w) || !isFinite(c) || c <= 0) return 0;
+  return w / c;
+}
+
 // --- Brand → Manufacturer Type map ---
 const MANUFACTURER_TYPES = {
   DANGOTE: ['Dangote 3X', 'Dangote BlocMaster', 'Dangote Falcon'],
@@ -52,11 +60,28 @@ const MANUFACTURER_TYPES = {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  const testDate = document.getElementById('testDate');
-  setDateToToday(testDate);
+  const crushingDate = document.getElementById('crushingDate');
+  setDateToToday(crushingDate);
 
   const brandSelect = document.getElementById('cementBrand');
   const manuSelect = document.getElementById('manufacturerCementType');
+
+  // Live w/c ratio elements
+  const waterEl = document.getElementById('water');
+  const cementEl = document.getElementById('cement');
+  const wcDisplay = document.getElementById('wcDisplay');
+
+  function updateWcDisplay() {
+    const wc = computeWc(waterEl.value, cementEl.value);
+    wcDisplay.textContent = (wc || 0).toFixed(2);
+  }
+  // Bind listeners
+  ['input','change'].forEach(evt => {
+    waterEl.addEventListener(evt, updateWcDisplay);
+    cementEl.addEventListener(evt, updateWcDisplay);
+  });
+  // Initial render
+  updateWcDisplay();
 
   function resetManuSelect() {
     manuSelect.innerHTML = '';
@@ -92,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = document.getElementById('submitBtn');
   const retryBtn = document.getElementById('retryBtn');
 
-  let lastPayload = null; // stores last submission data for retry
+  let lastPayload = null;
 
   function setStatus(msg, kind) {
     status.textContent = msg;
@@ -120,11 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Normalize numeric fields
     const numericKeys = [
       'cement','slag','flyAsh','silicaFume','limestone','water','superplasticizer','coarseAgg','fineAgg',
-      'slump','ageDays','targetMPa'
+      'slump','ageDays','targetMPa','cubesCount'
     ];
     numericKeys.forEach(k => data[k] = Number(data[k]));
 
-    // Remember this payload for potential retry
     lastPayload = { ...data };
 
     submitBtn.disabled = true;
@@ -133,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let savedToSheets = false;
 
     try {
-      // 1) Save to Google Sheets via Vercel function
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -147,21 +170,19 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Saved. Generating PDF...', 'ok');
     } catch (err) {
       console.error(err);
-      // Continue to PDF generation even if Sheets save failed
       setStatus(`Could not save to Google Sheets (${err.message}). Generating PDF anyway...`, 'err');
       showRetry(true);
     }
 
     try {
-      // 2) PDF (UNILAG logo + 3-line header)
       const logoDataURL = await loadImageAsDataURL('/unilag-logo.png');
       await generatePDF(data, logoDataURL);
 
-      // 3) Reset form & date regardless of Sheets success
       form.reset();
       resetManuSelect();
       manuSelect.disabled = true;
-      setDateToToday(testDate);
+      setDateToToday(crushingDate);
+      updateWcDisplay();
 
       if (savedToSheets) {
         setStatus('PDF downloaded and data saved to Google Sheets.', 'ok');
@@ -176,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Retry Save handler (uses lastPayload)
   retryBtn.addEventListener('click', async () => {
     if (!lastPayload) {
       setStatus('Nothing to retry. Please submit the form first.', 'err');
@@ -210,18 +230,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- PDF creator ---
+// One page only: compact fonts/spacing, no addPage.
 async function generatePDF(d, logoDataURL) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'A4' }); // 595 x 842 pt
 
   const pageW = 595;
-  const margin = 36;
-  const gapX = 14;
+  const pageH = 842;
+  const margin = 32;
+  const gapX = 12;
 
   // Header
-  const topY = 46;
-  const logoW = 60;
-  const logoH = 60;
+  const topY = 40;
+  const logoW = 56;
+  const logoH = 56;
   const textX = margin + logoW + gapX;
   const textW = pageW - margin - textX;
 
@@ -232,26 +254,26 @@ async function generatePDF(d, logoDataURL) {
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('DEPARTMENT OF CIVIL AND ENVIRONMENTAL ENGINEERING', textX, topY + 16, { maxWidth: textW });
   doc.setFontSize(11);
-  doc.text('FACULTY OF ENGINEERING', textX, topY + 34, { maxWidth: textW });
-  doc.text('CONCRETE LABORATORY', textX, topY + 52, { maxWidth: textW });
+  doc.text('DEPARTMENT OF CIVIL AND ENVIRONMENTAL ENGINEERING', textX, topY + 14, { maxWidth: textW });
+  doc.setFontSize(10);
+  doc.text('FACULTY OF ENGINEERING', textX, topY + 30, { maxWidth: textW });
+  doc.text('CONCRETE LABORATORY', textX, topY + 46, { maxWidth: textW });
 
   doc.setDrawColor(40);
-  doc.line(margin, topY + logoH + 12, pageW - margin, topY + logoH + 12);
+  doc.line(margin, topY + logoH + 10, pageW - margin, topY + logoH + 10);
 
-  // Body
-  const bodyStartY = topY + logoH + 32;
+  // Body (compact)
+  const bodyStartY = topY + logoH + 26;
   let y = bodyStartY;
-  const lh = 16;
+  const lh = 14;            // tighter line height
   const leftColX = margin;
-  const rightColX = 320;
+  const rightColX = 315;
 
   doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.text(`Date/Time Generated: ${new Date().toLocaleString()}`, margin, y); y += lh;
-  doc.text(`Date: ${d.testDate}`, margin, y); y += lh + 6;
+  doc.text(`Crushing Date: ${d.crushingDate}`, margin, y); y += lh + 4;
 
   // Client / Project
   doc.setFont('helvetica','bold'); doc.text('Client / Project', leftColX, y); y += lh;
@@ -259,19 +281,19 @@ async function generatePDF(d, logoDataURL) {
   doc.text(`Client: ${d.clientName}`, leftColX, y); y += lh;
   doc.text(`Project/Site: ${d.projectSite}`, leftColX, y); y += lh;
   doc.text(`Email: ${d.email}`, leftColX, y); y += lh;
-  doc.text(`Phone: ${d.phone}`, leftColX, y); y += lh + 6;
+  doc.text(`Phone: ${d.phone}`, leftColX, y); y += lh + 4;
 
   // Cement Info
   doc.setFont('helvetica','bold'); doc.text('Cement Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Cement Brand: ${d.cementBrand}`, leftColX, y); y += lh;
   doc.text(`Manufacturer's Cement Type: ${d.manufacturerCementType}`, leftColX, y);
-  doc.text(`Cement Type: ${d.cementType}`, rightColX, y); y += lh + 6;
+  doc.text(`Cement Type: ${d.cementType}`, rightColX, y); y += lh + 4;
 
-  // Superplasticizer Info (Name only)
+  // Superplasticizer Info
   doc.setFont('helvetica','bold'); doc.text('Superplasticizer Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
-  doc.text(`Superplasticizer Name: ${d.spName}`, leftColX, y); y += lh + 6;
+  doc.text(`Superplasticizer Name: ${d.spName}`, leftColX, y); y += lh + 4;
 
   // Mix Composition
   doc.setFont('helvetica','bold'); doc.text('Mix Composition (kg/m³)', leftColX, y); y += lh;
@@ -285,37 +307,56 @@ async function generatePDF(d, logoDataURL) {
   rows.forEach(([k,v]) => { doc.text(`${k}: ${Number(v).toFixed(2)}`, leftColX, y); y += lh; });
 
   // Slump
-  y += 6;
+  y += 4;
   doc.setFont('helvetica','bold'); doc.text('Slump / Workability', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Slump (mm): ${Number(d.slump).toFixed(1)}`, leftColX, y); y += lh;
 
-  // Age & Target
-  y += 6;
+  // Age & Target & Cubes
+  y += 4;
   doc.setFont('helvetica','bold'); doc.text('Age & Target Strength Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Age (days): ${d.ageDays}`, leftColX, y);
   doc.text(`Target Strength (MPa): ${Number(d.targetMPa).toFixed(2)}`, rightColX, y); y += lh;
+  doc.text(`Number of cubes to be crushed: ${d.cubesCount}`, leftColX, y); y += lh;
 
   // Derived metric
   const wc = (d.cement > 0) ? (Number(d.water) / Number(d.cement)) : 0;
-  doc.text(`Derived w/c ratio: ${wc.toFixed(3)}`, leftColX, y); y += lh;
+  doc.text(`Derived w/c ratio: ${wc.toFixed(2)}`, leftColX, y); y += lh;
 
-  // Notes
+  // Notes (wrap compactly)
   if (d.notes && d.notes.trim().length > 0) {
-    y += 6;
+    y += 4;
     doc.setFont('helvetica','bold'); doc.text('Additional Notes', leftColX, y); y += lh;
     doc.setFont('helvetica','normal');
-    const wrapped = doc.splitTextToSize(d.notes, 595 - margin*2);
+    const wrapped = doc.splitTextToSize(d.notes, pageW - margin*2);
     doc.text(wrapped, leftColX, y);
+    y += wrapped.length * (lh - 2);
   }
 
-  // Footer
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, 820, { align: 'center' });
+  // ---- FOR OFFICE USE ONLY box (one-page, no cubes line) ----
+  const boxHeight = 78;                              // compact box
+  const boxY = pageH - margin - boxHeight;          // always on this page
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10.5);
+  doc.setDrawColor(0);
+  doc.rect(margin, boxY, pageW - margin*2, boxHeight);
+  doc.text('FOR OFFICE USE ONLY', margin + 8, boxY + 16);
 
-  // File name: <ClientName>_<Date>.pdf (sanitized)
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9.5);
+  const line1 = 'Crushed Compressive Strength (MPa): ______________________________';
+  const line2 = 'Tested on: ____________________';
+  const line3 = 'Remarks: ___________________________________________________________';
+  doc.text(line1, margin + 8, boxY + 34);
+  doc.text(line2, margin + 8, boxY + 50);
+  doc.text(line3, margin + 8, boxY + 66);
+
+  // Footer (same page)
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, pageH - 10, { align: 'center' });
+
   const client = sanitizeFilename(d.clientName || 'Client');
-  const date = sanitizeFilename(d.testDate || new Date().toISOString().slice(0,10));
+  const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
   doc.save(`${client}_${date}.pdf`);
 }
