@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UNILAG Concrete Laboratory – Mix Intake Form</title>
+  <link rel="stylesheet" href="/style.css" />
+  <!-- jsPDF for client-side PDF generation -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div class="brand">
+        <h1>The Department of Civil & Environmental Engineering</h1>
+        <h2>CONCRETE LABORATORY, UNIVERSITY OF LAGOS</h2>
+      </div>
+      <p class="notice"><strong>FOR COMPONENTS THAT ARE NOT IN THE MIX PROPORTIONS, PLEASE ENTER 0.</strong></p>
+    </header>
+
+    <form id="mixForm" novalidate>
+      <!-- Client / Project -->
+      <section class="card">
+        <h3>Client / Project Details</h3>
+        <div class="grid two">
+          <label>
+            <span class="field-label">Client / Requester Name <sup class="req">*</sup></span>
+            <input type="text" name="clientName" required placeholder="Client Name" />
+          </label>
+          <label>
+            <span class="field-label">Project / Site <sup class="req">*</sup></span>
+            <input type="text" name="projectSite" required placeholder="Project or Site" />
+          </label>
+          <label>
+            <span class="field-label">Contact Email <sup class="req">*</sup></span>
+            <input type="email" name="email" required placeholder="Email Address" />
+          </label>
+          <label>
+            <span class="field-label">Contact Phone <sup class="req">*</sup></span>
+            <input type="tel" name="phone" required placeholder="Phone Number" />
+          </label>
+          <label>
+            <span class="field-label">Date <sup class="req">*</sup></span>
+            <input type="date" name="testDate" id="testDate" required />
+          </label>
+        </div>
+      </section>
+
+      <!-- Cement Information -->
+      <section class="card">
+        <h3>Cement Information</h3>
+
+        <div class="grid one">
+          <label>
+            <span class="field-label">Cement Brand <sup class="req">*</sup></span>
+            <select name="cementBrand" id="cementBrand" required>
+              <option value="" disabled selected>Select Brand</option>
+              <option>DANGOTE</option>
+              <option>LAFARGE</option>
+              <option>BUA</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid two">
+          <label>
+            <span class="field-label">Manufacturer's Cement Type <sup class="req">*</sup></span>
+            <select name="manufacturerCementType" id="manufacturerCementType" required disabled>
+              <option value="" disabled selected>Select Manufacturer's Type</option>
+            </select>
+          </label>
+
+          <label>
+            <span class="field-label">Cement Type <sup class="req">*</sup></span>
+            <select name="cementType" required>
+              <option value="" disabled selected>Select Cement Type</option>
+              <option>CEM I 52.5N</option>
+              <option>CEM I 32.5R</option>
+              <option>CEM II 32.5R</option>
+              <option>CEM II 32.5N</option>
+              <option>CEM II 42.5R</option>
+              <option>CEM II 42.5N</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- Superplasticizer -->
+      <section class="card">
+        <h3>Superplasticizer Information</h3>
+        <div class="grid one">
+          <label>
+            <span class="field-label">Superplasticizer Name <sup class="req">*</sup></span>
+            <input type="text" id="spName" name="spName" required placeholder="Superplasticizer Name" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Mix Composition -->
+      <section class="card">
+        <h3>Mix Composition (kg/m³)</h3>
+        <div class="grid three">
+          <label>
+            <span class="field-label">Cement (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="cement" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Blast Furnace Slag (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="slag" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Fly Ash (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="flyAsh" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Silica Fume (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="silicaFume" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Limestone Filler (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="limestone" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Water (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="water" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Superplasticizer (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="superplasticizer" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Coarse Aggregate (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="coarseAgg" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Fine Aggregate (kg/m³) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="fineAgg" required placeholder="0" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Slump -->
+      <section class="card">
+        <h3>Slump / Workability</h3>
+        <div class="grid one">
+          <label>
+            <span class="field-label">Slump (mm) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="slump" required placeholder="0" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Age & Target -->
+      <section class="card">
+        <h3>Age & Target Strength Information</h3>
+        <div class="grid two">
+          <label>
+            <span class="field-label">Age (days) <sup class="req">*</sup></span>
+            <input type="number" step="1" min="1" name="ageDays" required placeholder="0" />
+          </label>
+          <label>
+            <span class="field-label">Target Compressive Strength (MPa) <sup class="req">*</sup></span>
+            <input type="number" step="any" min="0" name="targetMPa" required placeholder="0" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Notes -->
+      <section class="card">
+        <h3>Additional Notes</h3>
+        <div class="grid one">
+          <label>
+            <span class="field-label">Notes (enter “Nil” if none) <sup class="req">*</sup></span>
+            <textarea name="notes" rows="3" required placeholder="Nil"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <footer class="actions">
+        <button type="submit" id="submitBtn">Submit, Save & Download PDF</button>
+        <button type="button" id="retryBtn" class="btn-secondary hidden" aria-hidden="true">Retry Save</button>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </footer>
+    </form>
+
+    <footer class="footer">
+      <p>&copy; <span id="year"></span> Concrete Laboratory, University of Lagos.</p>
+    </footer>
+  </main>
+
+  <script src="/script.js" defer></script>
+</body>
+</html>
