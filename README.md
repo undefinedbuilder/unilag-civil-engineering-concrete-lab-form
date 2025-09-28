@@ -112,7 +112,7 @@ Remarks: ___________________________________________________________
 
 ### 🔹 User Experience
 - **Crushing Date** always resets to today after submission.  
-- **Submit button** is larger, bold, and pinned at the bottom of the form.  
+- **Submit button** is large, bold, and pinned at the bottom of the form.  
 - **Retry Save** button only appears when Google Sheets save fails.  
 - Status messages:
 - ✅ Green = Success
@@ -132,3 +132,4 @@ Derived w/c | Notes
 
 
 ---
+
