@@ -1,7 +1,5 @@
 // --- Validation helpers ---
 function allFieldsFilled(form) {
-  return true;
-  
   const fields = form.querySelectorAll('input, select, textarea');
   for (const el of fields) {
     if (el.type === 'hidden') continue;
