@@ -187,9 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
       updateWcDisplay();
 
       if (savedToSheets) {
-        setStatus('PDF downloaded and data saved to Google Sheets.', 'ok');
+        setStatus('PDF downloaded and Data Saved.', 'ok');
       } else {
-        setStatus('PDF downloaded. Note: data was NOT saved to Google Sheets. You can retry.', 'err');
+        setStatus('PDF downloaded. Note: Data was NOT Saved. You can retry.', 'err');
       }
     } catch (pdfErr) {
       console.error(pdfErr);
@@ -362,3 +362,4 @@ async function generatePDF(d, logoDataURL) {
   const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
   doc.save(`${client}_${date}.pdf`);
 }
+
