@@ -53,10 +53,10 @@ export default async function handler(req, res) {
       cementBrand, manufacturerCementType, cementType, spName,
       // Mix composition
       cement, slag, flyAsh, silicaFume, limestone, water, superplasticizer, coarseAgg, fineAgg,
-      // Slump, Age, Target, Cubes
-      slump, ageDays, targetMPa, cubesCount,
       // Derived
       (Number(cement) > 0 ? (Number(water)/Number(cement)) : 0),
+      // Slump, Age, Target, Cubes
+      slump, ageDays, targetMPa, cubesCount,
       // Notes
       notes
     ]];
@@ -74,3 +74,4 @@ export default async function handler(req, res) {
     res.status(500).json({ success:false, message: err.message });
   }
 }
+
