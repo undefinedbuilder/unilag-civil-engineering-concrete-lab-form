@@ -9,25 +9,97 @@ function allFieldsFilled(form) {
   return true;
 }
 
+function highlightInvalids(form) {
+  let firstInvalid = null;
+  const fields = form.querySelectorAll('input, select, textarea');
+  fields.forEach(el => {
+    el.classList.remove('invalid');
+    el.removeAttribute('aria-invalid');
+    const msg = el.parentElement.querySelector('.invalid-message');
+    if (msg) msg.remove();
+
+    const empty = (el.value === '' || el.value === null || el.value === undefined);
+    if (!el.checkValidity() || empty) {
+      el.classList.add('invalid');
+      el.setAttribute('aria-invalid', 'true');
+      if (!firstInvalid) firstInvalid = el;
+
+      const small = document.createElement('div');
+      small.className = 'invalid-message';
+      small.textContent = 'Please fill this field (use 0 if not applicable).';
+      el.parentElement.appendChild(small);
+    }
+  });
+  if (firstInvalid) firstInvalid.focus({ preventScroll: true });
+  return !!firstInvalid;
+}
+
+function wireInvalidClearing(form) {
+  form.addEventListener('input', e => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    if (el.matches('input, select, textarea')) {
+      if (el.value !== '' && el.checkValidity()) {
+        el.classList.remove('invalid');
+        el.removeAttribute('aria-invalid');
+        const msg = el.parentElement.querySelector('.invalid-message');
+        if (msg) msg.remove();
+      }
+    }
+  });
+}
+
+// --- Top banner ---
+const banner = (() => {
+  const el = document.getElementById('banner');
+  let hideTimer = null;
+
+  function show(message, kind = 'ok', autoHideMs = 4000) {
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.remove('hidden', 'ok', 'err');
+    el.classList.add(kind === 'err' ? 'err' : 'ok');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (hideTimer) clearTimeout(hideTimer);
+    if (autoHideMs) {
+      hideTimer = setTimeout(() => {
+        el.classList.add('hidden');
+        el.textContent = '';
+      }, autoHideMs);
+    }
+  }
+
+  function hide() {
+    if (!el) return;
+    el.classList.add('hidden');
+    el.textContent = '';
+  }
+
+  return { show, hide };
+})();
+
 // --- Utilities ---
 function loadImageAsDataURL(path) {
   return fetch(path)
-    .then(resp => resp.blob())
+    .then(resp => {
+      if (!resp.ok) throw new Error('image load failed');
+      return resp.blob();
+    })
     .then(blob => new Promise((resolve) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result);
       r.readAsDataURL(blob);
-    }));
+    }))
+    .catch(() => null); // return null if logo missing
 }
 
-// Set the Date input to today's local date (YYYY-MM-DD)
 function setDateToToday(inputEl) {
   const tzOffset = new Date().getTimezoneOffset() * 60000;
   const todayLocal = new Date(Date.now() - tzOffset).toISOString().slice(0,10);
   inputEl.value = todayLocal;
 }
 
-// Sanitize filename: remove illegal chars and trim
 function sanitizeFilename(name) {
   return String(name)
     .replace(/[\\/:*?"<>|]+/g, ' ')
@@ -35,7 +107,6 @@ function sanitizeFilename(name) {
     .trim();
 }
 
-// Compute w/c ratio safely
 function computeWc(water, cement) {
   const w = Number(water);
   const c = Number(cement);
@@ -75,12 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const wc = computeWc(waterEl.value, cementEl.value);
     wcDisplay.textContent = (wc || 0).toFixed(2);
   }
-  // Bind listeners
   ['input','change'].forEach(evt => {
     waterEl.addEventListener(evt, updateWcDisplay);
     cementEl.addEventListener(evt, updateWcDisplay);
   });
-  // Initial render
   updateWcDisplay();
 
   function resetManuSelect() {
@@ -106,21 +175,34 @@ document.addEventListener('DOMContentLoaded', () => {
       const o = document.createElement('option');
       o.textContent = v;
       o.value = v;
+      o.selected = false;
       manuSelect.appendChild(o);
     });
     manuSelect.disabled = false;
   });
 
-  // Form submit + Retry Save
   const form = document.getElementById('mixForm');
+  wireInvalidClearing(form);
+
   const status = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
   const retryBtn = document.getElementById('retryBtn');
+  const actionsBar = document.getElementById('actionsBar');
+  const preButtonNote = document.getElementById('preButtonNote');
+  const validationNote = document.getElementById('validationNote');
 
-  let lastPayload = null;
+  // Modal elements
+  const modal = document.getElementById('appModal');
+  const modalNumber = document.getElementById('modalNumber');
+  const modalClose = document.getElementById('modalClose');
+
+  // --- SAFEGUARD: keep modal hidden on load ---
+  if (modal) {
+    modal.classList.add('hidden');
+  }
 
   function setStatus(msg, kind) {
-    status.textContent = msg;
+    status.textContent = msg || '';
     status.classList.remove('ok','err');
     if (kind === 'ok') status.classList.add('ok');
     if (kind === 'err') status.classList.add('err');
@@ -128,34 +210,59 @@ document.addEventListener('DOMContentLoaded', () => {
   function showRetry(show) {
     retryBtn.classList.toggle('hidden', !show);
     retryBtn.setAttribute('aria-hidden', show ? 'false' : 'true');
+    actionsBar.classList.toggle('two-cols', !!show);
   }
+  function showPreNote(show) {
+    preButtonNote.classList.toggle('hidden', !show);
+  }
+  function showValidationNote(show) {
+    validationNote.classList.toggle('hidden', !show);
+  }
+  function openModal(appNo) {
+    if (!appNo) return; // guard: never open without a valid ID
+    modalNumber.textContent = appNo;
+    setTimeout(() => modal.classList.remove('hidden'), 100);
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+  }
+
+  // Modal interactions
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  window.addEventListener('keydown', (e) => {
+    if (!modal.classList.contains('hidden') && e.key === 'Escape') closeModal();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setStatus('', null);
+    banner.hide();
     showRetry(false);
+    showPreNote(false);
+    showValidationNote(false);
+    closeModal(); // ensure it’s closed before any operation
 
-    if (!allFieldsFilled(form)) {
-      setStatus('Please complete all fields (use 0 where not applicable).', 'err');
+    // Validate before any server work
+    const hasInvalids = highlightInvalids(form);
+    if (hasInvalids || !allFieldsFilled(form)) {
+      setStatus('', 'err');
+      showValidationNote(true); // red note above the button
       return;
     }
 
+    // Collect form data (NO applicationNumber here — server will assign)
     const data = Object.fromEntries(new FormData(form).entries());
-
-    // Normalize numeric fields
     const numericKeys = [
       'cement','slag','flyAsh','silicaFume','limestone','water','superplasticizer','coarseAgg','fineAgg',
       'slump','ageDays','targetMPa','cubesCount'
     ];
     numericKeys.forEach(k => data[k] = Number(data[k]));
 
-    lastPayload = { ...data };
-
     submitBtn.disabled = true;
     setStatus('Submitting...', null);
 
-    let savedToSheets = false;
-
+    let out;
     try {
       const res = await fetch('/api/submit', {
         method: 'POST',
@@ -163,74 +270,84 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const out = await res.json();
-      if (!out.success) throw new Error(out.message || 'Unknown error');
-
-      savedToSheets = true;
-      setStatus('Saved. Generating PDF...', 'ok');
-    } catch (err) {
-      console.error(err);
-      setStatus(`Could not save to Google Sheets (${err.message}). Generating PDF anyway...`, 'err');
+      out = await res.json();
+      if (!out.success || !out.applicationNumber) throw new Error(out.message || 'Unknown error');
+    } catch {
+      // Submission failed: DO NOT generate PDF, DO NOT show app number
+      setStatus('', null);
+      showPreNote(true);
       showRetry(true);
+      submitBtn.disabled = false;
+      return;
     }
+
+    // If we get here, the row was saved successfully and the server assigned the app number
+    const applicationNumber = out.applicationNumber;
 
     try {
       const logoDataURL = await loadImageAsDataURL('/unilag-logo.png');
-      await generatePDF(data, logoDataURL);
+      await generatePDF({ ...data, applicationNumber }, logoDataURL);
 
+      openModal(applicationNumber);
+
+      // Reset form and UI
       form.reset();
       resetManuSelect();
       manuSelect.disabled = true;
       setDateToToday(crushingDate);
       updateWcDisplay();
 
-      if (savedToSheets) {
-        setStatus('PDF downloaded and Data Saved.', 'ok');
-      } else {
-        setStatus('PDF downloaded. Note: Data was NOT Saved. You can retry.', 'err');
-      }
-    } catch (pdfErr) {
-      console.error(pdfErr);
-      setStatus(`PDF generation failed: ${pdfErr.message}`, 'err');
-    } finally {
-      submitBtn.disabled = false;
-    }
-  });
-
-  retryBtn.addEventListener('click', async () => {
-    if (!lastPayload) {
-      setStatus('Nothing to retry. Please submit the form first.', 'err');
-      return;
-    }
-    retryBtn.disabled = true;
-    submitBtn.disabled = true;
-    setStatus('Retrying save to Google Sheets...', null);
-
-    try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(lastPayload),
-      });
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const out = await res.json();
-      if (!out.success) throw new Error(out.message || 'Unknown error');
-
-      setStatus('Data saved to Google Sheets successfully.', 'ok');
+      setStatus('PDF downloaded and Data Saved.', 'ok');
+      banner.show('Success: Data saved and PDF downloaded.', 'ok');
       showRetry(false);
-    } catch (err) {
-      console.error(err);
-      setStatus(`Retry failed: ${err.message}`, 'err');
-      showRetry(true);
+      showPreNote(false);
+    } catch (pdfErr) {
+      // Save succeeded but PDF failed → allow user to try again
+      setStatus(`PDF generation failed. Please try again.`, 'err');
+      banner.show('PDF generation failed. Please try again.', 'err');
     } finally {
-      retryBtn.disabled = false;
       submitBtn.disabled = false;
     }
+
+    // Retry handler (only used when initial save failed)
+    retryBtn.onclick = async () => {
+      retryBtn.disabled = true;
+      submitBtn.disabled = true;
+      setStatus('Retrying save to Google Sheets...', null);
+
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const retryOut = await res.json();
+        if (!retryOut.success || !retryOut.applicationNumber) throw new Error(retryOut.message || 'Unknown error');
+
+        const appNo = retryOut.applicationNumber;
+        const logoDataURL = await loadImageAsDataURL('/unilag-logo.png');
+        await generatePDF({ ...data, applicationNumber: appNo }, logoDataURL);
+        openModal(appNo);
+
+        setStatus('Data saved and PDF downloaded.', 'ok');
+        banner.show('Data saved and PDF downloaded.', 'ok');
+        showRetry(false);
+        showPreNote(false);
+      } catch {
+        setStatus('Retry failed. Please try again later.', 'err');
+        banner.show('Retry failed. Please try again later.', 'err');
+        showRetry(true);
+        showPreNote(true);
+      } finally {
+        retryBtn.disabled = false;
+        submitBtn.disabled = false;
+      }
+    };
   });
 });
 
-// --- PDF creator ---
-// One page only: compact fonts/spacing, no addPage.
+// --- PDF creator (one-page) ---
 async function generatePDF(d, logoDataURL) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'A4' }); // 595 x 842 pt
@@ -247,10 +364,19 @@ async function generatePDF(d, logoDataURL) {
   const textX = margin + logoW + gapX;
   const textW = pageW - margin - textX;
 
-  try {
-    doc.addImage(logoDataURL, 'PNG', margin, topY, logoW, logoH);
-  } catch (e) {
-    console.warn('Logo failed to load in PDF:', e);
+  let drewLogo = false;
+  if (logoDataURL) {
+    try {
+      doc.addImage(logoDataURL, 'PNG', margin, topY, logoW, logoH);
+      drewLogo = true;
+    } catch { drewLogo = false; }
+  }
+  if (!drewLogo) {
+    doc.setDrawColor(100);
+    doc.rect(margin, topY, logoW, logoH);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('UNILAG', margin + logoW/2, topY + logoH/2 + 3, { align: 'center' });
   }
 
   doc.setFont('helvetica', 'bold');
@@ -266,12 +392,13 @@ async function generatePDF(d, logoDataURL) {
   // Body (compact)
   const bodyStartY = topY + logoH + 26;
   let y = bodyStartY;
-  const lh = 14;            // tighter line height
+  const lh = 14;
   const leftColX = margin;
   const rightColX = 315;
 
   doc.setFont('helvetica','normal');
   doc.setFontSize(9.5);
+  doc.text(`Application Number: ${d.applicationNumber}`, margin, y); y += lh;
   doc.text(`Date/Time Generated: ${new Date().toLocaleString()}`, margin, y); y += lh;
   doc.text(`Crushing Date: ${d.crushingDate}`, margin, y); y += lh + 4;
 
@@ -324,7 +451,7 @@ async function generatePDF(d, logoDataURL) {
   const wc = (d.cement > 0) ? (Number(d.water) / Number(d.cement)) : 0;
   doc.text(`Derived w/c ratio: ${wc.toFixed(2)}`, leftColX, y); y += lh;
 
-  // Notes (wrap compactly)
+  // Notes
   if (d.notes && d.notes.trim().length > 0) {
     y += 4;
     doc.setFont('helvetica','bold'); doc.text('Additional Notes', leftColX, y); y += lh;
@@ -334,9 +461,9 @@ async function generatePDF(d, logoDataURL) {
     y += wrapped.length * (lh - 2);
   }
 
-  // ---- FOR OFFICE USE ONLY box (one-page, no cubes line) ----
-  const boxHeight = 78;                              // compact box
-  const boxY = pageH - margin - boxHeight;          // always on this page
+  // FOR OFFICE USE ONLY (one-page)
+  const boxHeight = 78;
+  const boxY = pageH - margin - boxHeight;
   doc.setFont('helvetica','bold');
   doc.setFontSize(10.5);
   doc.setDrawColor(0);
@@ -352,7 +479,7 @@ async function generatePDF(d, logoDataURL) {
   doc.text(line2, margin + 8, boxY + 50);
   doc.text(line3, margin + 8, boxY + 66);
 
-  // Footer (same page)
+  // Footer
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, pageH - 10, { align: 'center' });
 
@@ -360,4 +487,3 @@ async function generatePDF(d, logoDataURL) {
   const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
   doc.save(`${client}_${date}.pdf`);
 }
-
