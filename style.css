@@ -10,6 +10,12 @@
   --danger:#e11d48;
   --ok:#166534;
   --err:#b91c1c;
+  --note:#78350f;
+  --note-bg:#fffbeb;
+  --banner-ok:#ecfdf5;
+  --banner-ok-border:#10b981;
+  --banner-err:#fef2f2;
+  --banner-err-border:#ef4444;
 }
 
 *{box-sizing:border-box}
@@ -22,6 +28,19 @@ body{
 }
 
 .container{max-width:980px;margin:48px auto;padding:0 16px}
+
+/* Top banner */
+.banner{
+  position:sticky; top:0; z-index:1100;
+  margin:0; padding:10px 14px;
+  border-bottom:2px solid transparent;
+  text-align:center;
+  font-weight:600;
+}
+.banner.ok{ background:var(--banner-ok); border-color:var(--banner-ok-border); color:#065f46; }
+.banner.err{ background:var(--banner-err); border-color:var(--banner-err-border); color:#7f1d1d; }
+
+.hidden{display:none}
 
 /* Header + top logo */
 .header{text-align:center;margin-bottom:24px}
@@ -63,12 +82,24 @@ input,select,textarea{
   max-width:100%;
   box-sizing:border-box;
   padding:10px 12px;border:1px solid var(--border);border-radius:10px;
-  font:inherit;background:#fff;outline:none;transition:border .15s, box-shadow .15s;
+  font:inherit;background:#fff;outline:none;transition:border .15s, box-shadow .15s, background-color .15s;
 }
 input::placeholder,textarea::placeholder{color:#94a3b8}
 input:focus,select:focus,textarea:focus{
   border-color:var(--accent-2);
   box-shadow:0 0 0 4px var(--ring);
+}
+
+/* Invalid highlight */
+.invalid, .invalid:focus{
+  border-color:var(--danger) !important;
+  box-shadow:0 0 0 4px rgba(225,29,72,.2) !important;
+  background:#fff1f2;
+}
+.invalid-message{
+  color:var(--danger);
+  font-size:.82rem;
+  margin-top:4px;
 }
 
 /* span full width in grids */
@@ -82,8 +113,30 @@ input:focus,select:focus,textarea:focus{
 .metric-label{font-weight:600;color:#0f172a}
 .metric-value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
+/* notices above submit */
+.pre-note{
+  margin:8px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:.95rem;
+}
+/* Save-failure (yellow) */
+.pre-note:not(.error){
+  border:1px solid #f59e0b;
+  background:var(--note-bg);
+  color:var(--note);
+}
+/* Validation (red) */
+.pre-note.error{
+  border:1px solid var(--err);
+  background:#fef2f2;
+  color:var(--err);
+}
+
 /* actions */
-.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
+.actions{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px
+}
 button{
   background:linear-gradient(90deg,var(--accent),var(--accent-2));
   color:#fff;border:none;border-radius:12px;
@@ -97,6 +150,12 @@ button{
 }
 button:disabled{opacity:.6;cursor:not-allowed}
 
+/* two-cols mode: submit and retry split 50/50 */
+.actions.two-cols #submitBtn,
+.actions.two-cols #retryBtn{
+  flex:0 0 calc(50% - 6px);
+}
+
 /* secondary */
 .btn-secondary{
   background:#ffffff;
@@ -107,8 +166,9 @@ button:disabled{opacity:.6;cursor:not-allowed}
 
 /* mobile buttons full width */
 @media (max-width:600px){
-  .actions{flex-direction:column;align-items:stretch}
-  .actions button{width:100%}
+  .actions{flex-direction:row;flex-wrap:wrap}
+  .actions.two-cols #submitBtn,
+  .actions.two-cols #retryBtn{flex:1 1 100%}
 }
 
 /* status */
@@ -116,7 +176,57 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .status.ok{color:var(--ok)}
 .status.err{color:var(--err)}
 
-.footer{margin:28px 0 8px;text-align:center;color:var(--muted);font-size:.9rem}
+/* Centered modal overlay */
+.modal{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(2,6,23,.55);
+}
+.modal .modal-card{
+  width:min(92vw,480px);
+  background:#fff;border-radius:14px;border:1px solid var(--border);
+  box-shadow:0 20px 60px rgba(2,6,23,.3);overflow:hidden;
+}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;border-bottom:1px solid var(--border);background:#f8fafc;
+}
+.modal-header h4{margin:0;font-size:1.05rem;text-align:left}
+
+/* SMALL circular “×” button aligned right, perfectly centered glyph */
+.modal-x{
+  all:unset;
+  box-sizing:border-box;
+  width:28px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:100%;
+  background:#fff;
+  border:1px solid var(--border);
+  color:#475569;
+  font-size:16px;
+  font-weight:600;
+  line-height:1;
+  padding:0;
+  margin:0;
+  cursor:pointer;
+  user-select:none;
+}
+.modal-x:focus-visible{
+  outline:2px solid var(--accent-2);
+  outline-offset:2px;
+}
+
+.modal-body{padding:16px}
+.modal-number{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight:800;font-size:1.1rem;margin-bottom:8px;
+}
+.modal-note{color:#334155}
+
+/* >>> CRITICAL FIX: keep modal hidden when it has the .hidden class <<< */
+.modal.hidden{
+  display:none !important;
+}
 
 /* utility */
-.hidden{display:none}
+.footer{margin:28px 0 8px;text-align:center;color:#0f172a;font-size:.9rem}
