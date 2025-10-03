@@ -1,3 +1,12 @@
+// --- Lightweight Analytics helper (Vercel Web Analytics) ---
+function track(name, data = {}) {
+  try {
+    if (typeof window !== 'undefined' && typeof window.va === 'function') {
+      window.va('event', { name, ...data });
+    }
+  } catch (_) { /* no-op if analytics not available */ }
+}
+
 // --- Validation helpers ---
 function allFieldsFilled(form) {
   const fields = form.querySelectorAll('input, select, textarea');
@@ -222,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!appNo) return; // guard: never open without a valid ID
     modalNumber.textContent = appNo;
     setTimeout(() => modal.classList.remove('hidden'), 100);
+    track('app_number_shown');
   }
   function closeModal() {
     modal.classList.add('hidden');
@@ -248,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hasInvalids || !allFieldsFilled(form)) {
       setStatus('', 'err');
       showValidationNote(true); // red note above the button
+      track('form_validation_error');
       return;
     }
 
@@ -261,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     submitBtn.disabled = true;
     setStatus('Submitting...', null);
+    track('form_submit_attempt');
 
     let out;
     try {
@@ -278,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showPreNote(true);
       showRetry(true);
       submitBtn.disabled = false;
+      track('form_submit_error', { reason: 'save_failed' });
       return;
     }
 
@@ -301,10 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
       banner.show('Success: Data saved and PDF downloaded.', 'ok');
       showRetry(false);
       showPreNote(false);
+      track('form_submit_success');
     } catch (pdfErr) {
       // Save succeeded but PDF failed → allow user to try again
       setStatus(`PDF generation failed. Please try again.`, 'err');
       banner.show('PDF generation failed. Please try again.', 'err');
+      track('pdf_generation_error');
     } finally {
       submitBtn.disabled = false;
     }
@@ -314,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
       retryBtn.disabled = true;
       submitBtn.disabled = true;
       setStatus('Retrying save to Google Sheets...', null);
+      track('retry_attempt');
 
       try {
         const res = await fetch('/api/submit', {
@@ -334,11 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
         banner.show('Data saved and PDF downloaded.', 'ok');
         showRetry(false);
         showPreNote(false);
+        track('retry_success');
       } catch {
         setStatus('Retry failed. Please try again later.', 'err');
         banner.show('Retry failed. Please try again later.', 'err');
         showRetry(true);
         showPreNote(true);
+        track('retry_error');
       } finally {
         retryBtn.disabled = false;
         submitBtn.disabled = false;
@@ -456,32 +474,32 @@ async function generatePDF(d, logoDataURL) {
     y += 4;
     doc.setFont('helvetica','bold'); doc.text('Additional Notes', leftColX, y); y += lh;
     doc.setFont('helvetica','normal');
-    const wrapped = doc.splitTextToSize(d.notes, pageW - margin*2);
+    const wrapped = doc.splitTextToSize(d.notes, 595 - 32*2);
     doc.text(wrapped, leftColX, y);
     y += wrapped.length * (lh - 2);
   }
 
   // FOR OFFICE USE ONLY (one-page)
   const boxHeight = 78;
-  const boxY = pageH - margin - boxHeight;
+  const boxY = 842 - 32 - boxHeight;
   doc.setFont('helvetica','bold');
   doc.setFontSize(10.5);
   doc.setDrawColor(0);
-  doc.rect(margin, boxY, pageW - margin*2, boxHeight);
-  doc.text('FOR OFFICE USE ONLY', margin + 8, boxY + 16);
+  doc.rect(32, boxY, 595 - 32*2, boxHeight);
+  doc.text('FOR OFFICE USE ONLY', 40, boxY + 16);
 
   doc.setFont('helvetica','normal');
   doc.setFontSize(9.5);
   const line1 = 'Crushed Compressive Strength (MPa): ______________________________';
   const line2 = 'Tested on: ____________________';
   const line3 = 'Remarks: ___________________________________________________________';
-  doc.text(line1, margin + 8, boxY + 34);
-  doc.text(line2, margin + 8, boxY + 50);
-  doc.text(line3, margin + 8, boxY + 66);
+  doc.text(line1, 40, boxY + 34);
+  doc.text(line2, 40, boxY + 50);
+  doc.text(line3, 40, boxY + 66);
 
   // Footer
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, pageH - 10, { align: 'center' });
+  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, 842 - 10, { align: 'center' });
 
   const client = sanitizeFilename(d.clientName || 'Client');
   const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
