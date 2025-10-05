@@ -8,10 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 </head>
 <body>
-  <!-- Top banner -->
+  <!-- SECTION: Top status banner (announces success/error messages and auto-hides) -->
   <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
 
   <main class="container">
+    <!-- SECTION: Page Header & Branding -->
     <header class="header">
       <div class="logo-box">
         <img src="/unilag-logo.png" alt="UNILAG Logo" class="logo">
@@ -23,8 +24,9 @@
       <p class="notice"><strong>FOR COMPONENTS THAT ARE NOT IN THE MIX PROPORTIONS, PLEASE ENTER 0.</strong></p>
     </header>
 
+    <!-- SECTION: Main Data Capture Form -->
     <form id="mixForm" novalidate>
-      <!-- Client / Project -->
+      <!-- SUBSECTION: Client / Project -->
       <section class="card">
         <h3>Client / Project Details</h3>
         <div class="grid two">
@@ -45,7 +47,6 @@
             <input type="tel" name="phone" required placeholder="Phone Number" />
           </label>
 
-          <!-- FULL-WIDTH on all screens -->
           <label class="full">
             <span class="field-label">Crushing Date <sup class="req">*</sup></span>
             <input type="date" name="crushingDate" id="crushingDate" required />
@@ -53,7 +54,7 @@
         </div>
       </section>
 
-      <!-- Cement Information -->
+      <!-- SUBSECTION: Cement Information -->
       <section class="card">
         <h3>Cement Information</h3>
 
@@ -92,7 +93,7 @@
         </div>
       </section>
 
-      <!-- Superplasticizer -->
+      <!-- SUBSECTION: Superplasticizer -->
       <section class="card">
         <h3>Superplasticizer Information</h3>
         <div class="grid one">
@@ -103,7 +104,7 @@
         </div>
       </section>
 
-      <!-- Mix Composition -->
+      <!-- SUBSECTION: Mix Composition -->
       <section class="card">
         <h3>Mix Composition (kg/m³)</h3>
         <div class="grid three">
@@ -145,14 +146,14 @@
           </label>
         </div>
 
-        <!-- Live w/c ratio metric -->
+        <!-- SUBSECTION: Live w/c ratio; updated as water/cement change -->
         <div class="metric-row">
           <span class="metric-label">Derived w/c ratio:</span>
           <span id="wcDisplay" class="metric-value">0.00</span>
         </div>
       </section>
 
-      <!-- Slump -->
+      <!-- SUBSECTION: Slump -->
       <section class="card">
         <h3>Slump / Workability</h3>
         <div class="grid one">
@@ -163,7 +164,7 @@
         </div>
       </section>
 
-      <!-- Age & Target & No of Cubes -->
+      <!-- SUBSECTION: Age & Target & No of Cubes -->
       <section class="card">
         <h3>Age & Target Strength Information</h3>
         <div class="grid three">
@@ -182,7 +183,7 @@
         </div>
       </section>
 
-      <!-- Notes -->
+      <!-- SUBSECTION: Notes -->
       <section class="card">
         <h3>Additional Notes</h3>
         <div class="grid one">
@@ -193,16 +194,16 @@
         </div>
       </section>
 
-      <!-- Validation note (red) shown above the submit button -->
+      <!-- SUBSECTION: Validation & Status Messaging -->
       <p id="validationNote" class="pre-note error hidden">
         <strong>Please complete all fields</strong> (use 0 where not applicable).
       </p>
 
-      <!-- Pre-button important note (yellow; shown only on save failure) -->
       <p id="preButtonNote" class="pre-note hidden">
         <strong>Note:</strong> Data was <strong>NOT</strong> saved. You can retry.
       </p>
 
+      <!-- SUBSECTION: Form Actions -->
       <footer id="actionsBar" class="actions">
         <button type="submit" id="submitBtn">Submit, Save & Download PDF</button>
         <button type="button" id="retryBtn" class="btn-secondary hidden" aria-hidden="true">Retry Save</button>
@@ -210,7 +211,7 @@
       </footer>
     </form>
 
-    <!-- Centered modal (Application Number) -->
+    <!-- SECTION: Application Number Modal (shown only after successful save & PDF) -->
     <div id="appModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-card">
         <div class="modal-header">
@@ -224,14 +225,14 @@
       </div>
     </div>
 
+    <!-- SECTION: Footer -->
     <footer class="footer">
       <p>&copy; <span id="year"></span> Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.</p>
     </footer>
   </main>
 
+  <!-- SECTION: App Script & Analytics loader -->
   <script src="/script.js" defer></script>
-
-  <!-- Vercel Web Analytics (enabled via Vercel dashboard) -->
   <script>
     window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
   </script>
