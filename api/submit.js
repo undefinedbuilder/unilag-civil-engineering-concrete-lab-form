@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 
-// Reuseable helper to compute the next ID from the last one.
-// Format: UNILAG-CL-[A-Z][6 digits], e.g., UNILAG-CL-A000001
+/* SECTION: Helper to compute the next Application Number
+   Format UNILAG-CL-[A-Z][6 digits], wraps A..Z and rolls digits */
 function nextIdFrom(last) {
   if (!last || typeof last !== 'string') return 'UNILAG-CL-A000001';
   const m = last.trim().match(/^UNILAG-CL-([A-Z])(\d{6})$/);
@@ -12,10 +12,12 @@ function nextIdFrom(last) {
     num = 1;
     letter = letter + 1;
   }
-  if (letter > 90) letter = 65; // wrap to A after Z
+  if (letter > 90) letter = 65;
   return `UNILAG-CL-${String.fromCharCode(letter)}${String(num).padStart(6, '0')}`;
 }
 
+/* SECTION: Serverless entry – only accepts POST, validates fields,
+   assigns application number, saves to Google Sheets, returns JSON */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
@@ -23,23 +25,15 @@ export default async function handler(req, res) {
 
   try {
     const {
-      // Client / Project
       clientName, projectSite, email, phone, crushingDate,
-      // Cement
       cementBrand, manufacturerCementType, cementType,
-      // Superplasticizer Name
       spName,
-      // Mix composition
       cement, slag, flyAsh, silicaFume, limestone, water, superplasticizer, coarseAgg, fineAgg,
-      // Slump
       slump,
-      // Age & Target & Cubes
       ageDays, targetMPa, cubesCount,
-      // Notes
       notes
     } = req.body || {};
 
-    // Application number is NO LONGER required in the request body (server will assign)
     const requiredKeys = [
       'clientName','projectSite','email','phone','crushingDate',
       'cementBrand','manufacturerCementType','cementType','spName',
@@ -52,15 +46,15 @@ export default async function handler(req, res) {
       }
     }
 
+    /* SUBSECTION: Authorize Google Sheets API */
     const auth = new google.auth.GoogleAuth({
       credentials: JSON.parse(process.env.GOOGLE_SERVICE_CREDENTIALS),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
-
     const sheets = google.sheets({ version: 'v4', auth });
     const sheetId = process.env.SHEET_ID;
 
-    // 1) Read the last non-empty Application Number from column C to assign a new one
+    /* SUBSECTION: Read last used App Number from column C and compute the next */
     const rangeAppCol = 'Sheet1!C:C';
     const resp = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
@@ -74,29 +68,19 @@ export default async function handler(req, res) {
     }
     const applicationNumber = nextIdFrom(lastVal);
 
-    // 2) Append the row with the newly assigned application number
+    /* SUBSECTION: Compose and append the row */
     const when = new Date().toISOString();
     const derivedWc = (Number(cement) > 0 ? (Number(water)/Number(cement)) : 0);
-
     const row = [[
-      // Timestamp (server) & Crushing Date
       when, crushingDate,
-      // Application Number (server-assigned)
       applicationNumber,
-      // Client
       clientName, projectSite, email, phone,
-      // Cement fields
       cementBrand, manufacturerCementType, cementType, spName,
-      // Mix composition
       cement, slag, flyAsh, silicaFume, limestone, water, superplasticizer, coarseAgg, fineAgg,
-      // Derived w/c
       derivedWc,
-      // Slump, Age, Target, Cubes
       slump, ageDays, targetMPa, cubesCount,
-      // Notes
       notes
     ]];
-
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
       range: 'Sheet1!A:Z',
@@ -104,7 +88,7 @@ export default async function handler(req, res) {
       requestBody: { values: row }
     });
 
-    // 3) Return success + the assigned application number
+    /* SUBSECTION: Return success payload with assigned number */
     res.status(200).json({ success: true, applicationNumber });
   } catch (err) {
     console.error('submit error:', err);
