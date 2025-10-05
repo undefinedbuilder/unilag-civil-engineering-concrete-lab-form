@@ -1,13 +1,13 @@
-// --- Lightweight Analytics helper (Vercel Web Analytics) ---
+// SECTION: Lightweight analytics wrapper; safely no-ops if Vercel Analytics isn't present
 function track(name, data = {}) {
   try {
     if (typeof window !== 'undefined' && typeof window.va === 'function') {
       window.va('event', { name, ...data });
     }
-  } catch (_) { /* no-op if analytics not available */ }
+  } catch (_) {}
 }
 
-// --- Validation helpers ---
+// SECTION: Validation utilities used to gate submission and show inline errors
 function allFieldsFilled(form) {
   const fields = form.querySelectorAll('input, select, textarea');
   for (const el of fields) {
@@ -58,7 +58,7 @@ function wireInvalidClearing(form) {
   });
 }
 
-// --- Top banner ---
+// SECTION: Top banner controller for transient success/error notifications
 const banner = (() => {
   const el = document.getElementById('banner');
   let hideTimer = null;
@@ -88,7 +88,7 @@ const banner = (() => {
   return { show, hide };
 })();
 
-// --- Utilities ---
+// SECTION: General utilities (image loading, date handling, filenames, derived metrics)
 function loadImageAsDataURL(path) {
   return fetch(path)
     .then(resp => {
@@ -100,7 +100,7 @@ function loadImageAsDataURL(path) {
       r.onload = () => resolve(r.result);
       r.readAsDataURL(blob);
     }))
-    .catch(() => null); // return null if logo missing
+    .catch(() => null);
 }
 
 function setDateToToday(inputEl) {
@@ -123,7 +123,7 @@ function computeWc(water, cement) {
   return w / c;
 }
 
-// --- Brand → Manufacturer Type map ---
+// SECTION: Brand to Manufacturer Types mapping used to populate second select
 const MANUFACTURER_TYPES = {
   DANGOTE: ['Dangote 3X', 'Dangote BlocMaster', 'Dangote Falcon'],
   LAFARGE: [
@@ -137,16 +137,16 @@ const MANUFACTURER_TYPES = {
   BUA: ['BUA']
 };
 
+// SECTION: Main bootstrapping — wire UI, validation, submission, modal, and PDF generation
 document.addEventListener('DOMContentLoaded', () => {
+  // SUBSECTION: Footer year and default date
   document.getElementById('year').textContent = new Date().getFullYear();
-
   const crushingDate = document.getElementById('crushingDate');
   setDateToToday(crushingDate);
 
+  // SUBSECTION: Brand-driven select and live w/c ratio
   const brandSelect = document.getElementById('cementBrand');
   const manuSelect = document.getElementById('manufacturerCementType');
-
-  // Live w/c ratio elements
   const waterEl = document.getElementById('water');
   const cementEl = document.getElementById('cement');
   const wcDisplay = document.getElementById('wcDisplay');
@@ -190,9 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
     manuSelect.disabled = false;
   });
 
+  // SUBSECTION: Form, status, actions, and modal references
   const form = document.getElementById('mixForm');
   wireInvalidClearing(form);
-
   const status = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
   const retryBtn = document.getElementById('retryBtn');
@@ -200,16 +200,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const preButtonNote = document.getElementById('preButtonNote');
   const validationNote = document.getElementById('validationNote');
 
-  // Modal elements
   const modal = document.getElementById('appModal');
   const modalNumber = document.getElementById('modalNumber');
   const modalClose = document.getElementById('modalClose');
 
-  // --- SAFEGUARD: keep modal hidden on load ---
+  // SUBSECTION: Ensure modal is hidden on initial load
   if (modal) {
     modal.classList.add('hidden');
   }
 
+  // SUBSECTION: Small helpers for toggling UI state
   function setStatus(msg, kind) {
     status.textContent = msg || '';
     status.classList.remove('ok','err');
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     validationNote.classList.toggle('hidden', !show);
   }
   function openModal(appNo) {
-    if (!appNo) return; // guard: never open without a valid ID
+    if (!appNo) return;
     modalNumber.textContent = appNo;
     setTimeout(() => modal.classList.remove('hidden'), 100);
     track('app_number_shown');
@@ -237,13 +237,14 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.classList.add('hidden');
   }
 
-  // Modal interactions
+  // SUBSECTION: Modal interactions (click outside, ESC, header button)
   modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
   window.addEventListener('keydown', (e) => {
     if (!modal.classList.contains('hidden') && e.key === 'Escape') closeModal();
   });
 
+  // SUBSECTION: Main submit handler — validates, posts to API, handles save failure/success and PDF
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setStatus('', null);
@@ -251,18 +252,16 @@ document.addEventListener('DOMContentLoaded', () => {
     showRetry(false);
     showPreNote(false);
     showValidationNote(false);
-    closeModal(); // ensure it’s closed before any operation
+    closeModal();
 
-    // Validate before any server work
     const hasInvalids = highlightInvalids(form);
     if (hasInvalids || !allFieldsFilled(form)) {
       setStatus('', 'err');
-      showValidationNote(true); // red note above the button
+      showValidationNote(true);
       track('form_validation_error');
       return;
     }
 
-    // Collect form data (NO applicationNumber here — server will assign)
     const data = Object.fromEntries(new FormData(form).entries());
     const numericKeys = [
       'cement','slag','flyAsh','silicaFume','limestone','water','superplasticizer','coarseAgg','fineAgg',
@@ -285,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
       out = await res.json();
       if (!out.success || !out.applicationNumber) throw new Error(out.message || 'Unknown error');
     } catch {
-      // Submission failed: DO NOT generate PDF, DO NOT show app number
+      // Save failed ⇒ do not generate PDF or show application number; invite retry
       setStatus('', null);
       showPreNote(true);
       showRetry(true);
@@ -294,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // If we get here, the row was saved successfully and the server assigned the app number
+    // Save succeeded ⇒ fetch logo, generate PDF, show app number modal, reset form
     const applicationNumber = out.applicationNumber;
 
     try {
@@ -303,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       openModal(applicationNumber);
 
-      // Reset form and UI
       form.reset();
       resetManuSelect();
       manuSelect.disabled = true;
@@ -315,16 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
       showRetry(false);
       showPreNote(false);
       track('form_submit_success');
-    } catch (pdfErr) {
-      // Save succeeded but PDF failed → allow user to try again
-      setStatus(`PDF generation failed. Please try again.`, 'err');
+    } catch {
+      setStatus('PDF generation failed. Please try again.', 'err');
       banner.show('PDF generation failed. Please try again.', 'err');
       track('pdf_generation_error');
     } finally {
       submitBtn.disabled = false;
     }
 
-    // Retry handler (only used when initial save failed)
+    // SUBSECTION: Retry handler wires the same payload to the API when initial save fails
     retryBtn.onclick = async () => {
       retryBtn.disabled = true;
       submitBtn.disabled = true;
@@ -365,17 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// --- PDF creator (one-page) ---
+// SECTION: One-page PDF generator using jsPDF; draws header, sections, and an office-use box
 async function generatePDF(d, logoDataURL) {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'A4' }); // 595 x 842 pt
+  const doc = new jsPDF({ unit: 'pt', format: 'A4' });
 
   const pageW = 595;
   const pageH = 842;
   const margin = 32;
   const gapX = 12;
 
-  // Header
+  // SUBSECTION: Header area with logo (or placeholder) and department text
   const topY = 40;
   const logoW = 56;
   const logoH = 56;
@@ -407,7 +404,7 @@ async function generatePDF(d, logoDataURL) {
   doc.setDrawColor(40);
   doc.line(margin, topY + logoH + 10, pageW - margin, topY + logoH + 10);
 
-  // Body (compact)
+  // SUBSECTION: Document body with tightly packed rows
   const bodyStartY = topY + logoH + 26;
   let y = bodyStartY;
   const lh = 14;
@@ -420,7 +417,7 @@ async function generatePDF(d, logoDataURL) {
   doc.text(`Date/Time Generated: ${new Date().toLocaleString()}`, margin, y); y += lh;
   doc.text(`Crushing Date: ${d.crushingDate}`, margin, y); y += lh + 4;
 
-  // Client / Project
+  // SUBSECTION: Client / Project
   doc.setFont('helvetica','bold'); doc.text('Client / Project', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Client: ${d.clientName}`, leftColX, y); y += lh;
@@ -428,19 +425,19 @@ async function generatePDF(d, logoDataURL) {
   doc.text(`Email: ${d.email}`, leftColX, y); y += lh;
   doc.text(`Phone: ${d.phone}`, leftColX, y); y += lh + 4;
 
-  // Cement Info
+  // SUBSECTION: Cement Information
   doc.setFont('helvetica','bold'); doc.text('Cement Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Cement Brand: ${d.cementBrand}`, leftColX, y); y += lh;
   doc.text(`Manufacturer's Cement Type: ${d.manufacturerCementType}`, leftColX, y);
   doc.text(`Cement Type: ${d.cementType}`, rightColX, y); y += lh + 4;
 
-  // Superplasticizer Info
+  // SUBSECTION: Superplasticizer
   doc.setFont('helvetica','bold'); doc.text('Superplasticizer Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Superplasticizer Name: ${d.spName}`, leftColX, y); y += lh + 4;
 
-  // Mix Composition
+  // SUBSECTION: Mix Composition
   doc.setFont('helvetica','bold'); doc.text('Mix Composition (kg/m³)', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   const rows = [
@@ -451,13 +448,13 @@ async function generatePDF(d, logoDataURL) {
   ];
   rows.forEach(([k,v]) => { doc.text(`${k}: ${Number(v).toFixed(2)}`, leftColX, y); y += lh; });
 
-  // Slump
+  // SUBSECTION: Slump
   y += 4;
   doc.setFont('helvetica','bold'); doc.text('Slump / Workability', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
   doc.text(`Slump (mm): ${Number(d.slump).toFixed(1)}`, leftColX, y); y += lh;
 
-  // Age & Target & Cubes
+  // SUBSECTION: Age & Target & Cubes
   y += 4;
   doc.setFont('helvetica','bold'); doc.text('Age & Target Strength Information', leftColX, y); y += lh;
   doc.setFont('helvetica','normal');
@@ -465,11 +462,11 @@ async function generatePDF(d, logoDataURL) {
   doc.text(`Target Strength (MPa): ${Number(d.targetMPa).toFixed(2)}`, rightColX, y); y += lh;
   doc.text(`Number of cubes to be crushed: ${d.cubesCount}`, leftColX, y); y += lh;
 
-  // Derived metric
+  // SUBSECTION: Derived metric
   const wc = (d.cement > 0) ? (Number(d.water) / Number(d.cement)) : 0;
   doc.text(`Derived w/c ratio: ${wc.toFixed(2)}`, leftColX, y); y += lh;
 
-  // Notes
+  // SUBSECTION: Notes (wrapped to page width)
   if (d.notes && d.notes.trim().length > 0) {
     y += 4;
     doc.setFont('helvetica','bold'); doc.text('Additional Notes', leftColX, y); y += lh;
@@ -479,9 +476,9 @@ async function generatePDF(d, logoDataURL) {
     y += wrapped.length * (lh - 2);
   }
 
-  // FOR OFFICE USE ONLY (one-page)
+  // SUBSECTION: For Office Use block at bottom
   const boxHeight = 78;
-  const boxY = 842 - 32 - boxHeight;
+  const boxY = pageH - 32 - boxHeight;
   doc.setFont('helvetica','bold');
   doc.setFontSize(10.5);
   doc.setDrawColor(0);
@@ -497,9 +494,9 @@ async function generatePDF(d, logoDataURL) {
   doc.text(line2, 40, boxY + 50);
   doc.text(line3, 40, boxY + 66);
 
-  // Footer
+  // SUBSECTION: Footer and file save
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, 842 - 10, { align: 'center' });
+  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, pageH - 10, { align: 'center' });
 
   const client = sanitizeFilename(d.clientName || 'Client');
   const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
