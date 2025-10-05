@@ -64,13 +64,6 @@
 
 ---
 
-## Local Testing (Vercel)
-```bash
-npm i
-npm run dev
-# Open http://localhost:3000 to test
-```
-
 ---
 
 ## Notes on Validation & Safety
@@ -85,3 +78,4 @@ npm run dev
 - 
 - University of Lagos – Department of Civil & Environmental Engineering, Concrete Laboratory.
 - jsPDF for client‑side PDF generation.
+
