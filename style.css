@@ -1,4 +1,5 @@
 :root{
+  /* SECTION: Theme tokens */
   --bg:#f7fafc;
   --card:#ffffff;
   --ink:#1a202c;
@@ -21,6 +22,7 @@
 *{box-sizing:border-box}
 
 body{
+  /* SECTION: Global page canvas */
   margin:5px;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
   color:var(--ink);
@@ -29,7 +31,7 @@ body{
 
 .container{max-width:980px;margin:48px auto;padding:0 16px}
 
-/* Top banner */
+/* SECTION: Top banner */
 .banner{
   position:sticky; top:0; z-index:1100;
   margin:0; padding:10px 14px;
@@ -42,13 +44,14 @@ body{
 
 .hidden{display:none}
 
-/* Header + top logo */
+/* SECTION: Header & logo */
 .header{text-align:center;margin-bottom:24px}
 .logo-box{display:flex;justify-content:center;margin-bottom:12px}
 .logo{max-height:80px;width:auto}
 .header .brand h1{margin:0;font-size:1.35rem;letter-spacing:.2px}
 .header .brand h2{margin:6px 0 8px;color:var(--accent);font-size:1.05rem}
 
+/* SECTION: Notice panel */
 .notice{
   background:var(--card);
   border:1px solid var(--border);
@@ -56,6 +59,7 @@ body{
   box-shadow:0 6px 18px rgba(37,99,235,.08)
 }
 
+/* SECTION: Card blocks */
 .card{
   background:var(--card);
   border:1px solid var(--border);
@@ -66,17 +70,18 @@ body{
 }
 .card h3{margin:0 0 12px;font-size:1.05rem;color:#0f172a}
 
+/* SECTION: Grids */
 .grid{display:grid;gap:12px}
 .grid.one{grid-template-columns:1fr}
 .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:900px){.grid.one,.grid.two,.grid.three{grid-template-columns:1fr}}
 
+/* SECTION: Form controls */
 label{display:flex;flex-direction:column;font-size:.9rem;gap:6px}
 .field-label{display:inline-flex;align-items:baseline;gap:4px}
 .req{color:var(--danger);font-weight:700;line-height:1}
 
-/* inputs full width */
 input,select,textarea{
   width:100%;
   max-width:100%;
@@ -90,7 +95,7 @@ input:focus,select:focus,textarea:focus{
   box-shadow:0 0 0 4px var(--ring);
 }
 
-/* Invalid highlight */
+/* SECTION: Invalid highlight */
 .invalid, .invalid:focus{
   border-color:var(--danger) !important;
   box-shadow:0 0 0 4px rgba(225,29,72,.2) !important;
@@ -102,10 +107,10 @@ input:focus,select:focus,textarea:focus{
   margin-top:4px;
 }
 
-/* span full width in grids */
+/* SECTION: Layout utility */
 .full{grid-column:1 / -1}
 
-/* live metric display */
+/* METRIC: Live w/c ratio display row */
 .metric-row{
   display:flex;align-items:center;gap:8px;margin-top:6px;
   padding:8px 12px;border:1px dashed var(--border);border-radius:10px;background:#fbfdff;
@@ -113,27 +118,25 @@ input:focus,select:focus,textarea:focus{
 .metric-label{font-weight:600;color:#0f172a}
 .metric-value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-/* notices above submit */
+/* SECTION: Notes above submit */
 .pre-note{
   margin:8px 0 0;
   padding:10px 12px;
   border-radius:10px;
   font-size:.95rem;
 }
-/* Save-failure (yellow) */
 .pre-note:not(.error){
   border:1px solid #f59e0b;
   background:var(--note-bg);
   color:var(--note);
 }
-/* Validation (red) */
 .pre-note.error{
   border:1px solid var(--err);
   background:#fef2f2;
-  color:var(--err);
+  color:#b91c1c;
 }
 
-/* actions */
+/* SECTION: Actions bar & buttons */
 .actions{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px
 }
@@ -149,34 +152,27 @@ button{
   text-align:center;
 }
 button:disabled{opacity:.6;cursor:not-allowed}
-
-/* two-cols mode: submit and retry split 50/50 */
 .actions.two-cols #submitBtn,
-.actions.two-cols #retryBtn{
-  flex:0 0 calc(50% - 6px);
-}
+.actions.two-cols #retryBtn{flex:0 0 calc(50% - 6px)}
 
-/* secondary */
 .btn-secondary{
   background:#ffffff;
   color:var(--accent-2);
   border:1px solid var(--accent-2);
   box-shadow:none;
 }
-
-/* mobile buttons full width */
 @media (max-width:600px){
   .actions{flex-direction:row;flex-wrap:wrap}
   .actions.two-cols #submitBtn,
   .actions.two-cols #retryBtn{flex:1 1 100%}
 }
 
-/* status */
+/* SECTION: Status text */
 .status{margin:0}
 .status.ok{color:var(--ok)}
-.status.err{color:var(--err)}
+.status.err{color:#b91c1c}
 
-/* Centered modal overlay */
+/* SECTION: Centered modal overlay */
 .modal{
   position:fixed;inset:0;z-index:1000;
   display:flex;align-items:center;justify-content:center;
@@ -193,7 +189,7 @@ button:disabled{opacity:.6;cursor:not-allowed}
 }
 .modal-header h4{margin:0;font-size:1.05rem;text-align:left}
 
-/* SMALL circular “×” button aligned right, perfectly centered glyph */
+/* SECTION: Small circular close button */
 .modal-x{
   all:unset;
   box-sizing:border-box;
@@ -215,7 +211,6 @@ button:disabled{opacity:.6;cursor:not-allowed}
   outline:2px solid var(--accent-2);
   outline-offset:2px;
 }
-
 .modal-body{padding:16px}
 .modal-number{
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -223,10 +218,8 @@ button:disabled{opacity:.6;cursor:not-allowed}
 }
 .modal-note{color:#334155}
 
-/* >>> CRITICAL FIX: keep modal hidden when it has the .hidden class <<< */
-.modal.hidden{
-  display:none !important;
-}
+/* SECTION: Keep modal hidden when .hidden is present */
+.modal.hidden{display:none !important}
 
-/* utility */
+/* SECTION: Footer */
 .footer{margin:28px 0 8px;text-align:center;color:#0f172a;font-size:.9rem}
