@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     const sheetId = process.env.SHEET_ID;
 
     /* SUBSECTION: Read last used App Number from column C and compute the next */
-    const rangeAppCol = 'Sheet1!C:C';
+    const rangeAppCol = 'Testing Sheet!C:C';
     const resp = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
       range: rangeAppCol,
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     ]];
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A:Z',
+      range: 'Testing Sheet!A:Z',
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: row }
     });
@@ -95,3 +95,4 @@ export default async function handler(req, res) {
     res.status(500).json({ success:false, message: 'Save failed' });
   }
 }
+
