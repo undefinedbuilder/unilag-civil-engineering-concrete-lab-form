@@ -42,7 +42,7 @@ function computeKgMixRatio(cementContent, waterContent, fineAgg, mediumAgg, coar
 }
 
 /* ---------------------------------------------------------------
-   HELPER: MIX RATIO FROM "PARTS" (RATIO MODE)
+   HELPER: MIX RATIO FROM "RATIOS"
 ---------------------------------------------------------------- */
 function computeRatioMix(ratioCement, ratioFine, ratioMedium, ratioCoarse, ratioWater) {
   const c = Number(ratioCement);
@@ -91,19 +91,15 @@ export default async function handler(req, res) {
 
   /* -----------------------------------------------------------
      BASIC VALIDATION – COMMON FIELDS
-     IDs mapped from HTML:
-     - studentName     = Client / Company Name
-     - contactEmail    = Client Email
-     - matricNo        = Contact Phone
-     - projectTitle    = Project / Site
+     IDs mapped from HTML
   ------------------------------------------------------------ */
   const commonRequired = [
-    "studentName",
+    "clientName",
     "contactEmail",
-    "matricNo",
-    "institution",
-    "supervisor",
-    "projectTitle",
+    "phoneNumber",
+    "organisationType",
+    "contactPerson",
+    "projectSite",
     "crushDate",
     "concreteType",
     "cementType",
@@ -167,12 +163,12 @@ export default async function handler(req, res) {
      DESTRUCTURE BODY
   ------------------------------------------------------------ */
   const {
-    studentName,
+    clientName,
     contactEmail,
-    matricNo,
-    institution,
-    supervisor,
-    projectTitle,
+    phoneNumber,
+    organisationType,
+    contactPerson,
+    projectSite,
     crushDate,
     concreteType,
     cementType,
@@ -290,7 +286,7 @@ export default async function handler(req, res) {
      C: Client / Company Name
      D: Contact Email
      E: Contact Phone
-     F: Organisation / Institution
+     F: Organisation Type
      G: Contact Person
      H: Project / Site
      I: Crushing Date
@@ -312,12 +308,12 @@ export default async function handler(req, res) {
       [
         recordId,
         timestamp,
-        studentName,
+        clientName,
         contactEmail,
-        matricNo,
-        institution,
-        supervisor,
-        projectTitle,
+        phoneNumber,
+        organisationType,
+        contactPerson,
+        projectSite,
         crushDate,
         concreteType,
         cementType,
@@ -340,12 +336,12 @@ export default async function handler(req, res) {
       [
         recordId,
         timestamp,
-        studentName,
+        clientName,
         contactEmail,
-        matricNo,
-        institution,
-        supervisor,
-        projectTitle,
+        phoneNumber,
+        organisationType,
+        contactPerson,
+        projectSite,
         crushDate,
         concreteType,
         cementType,
@@ -398,7 +394,7 @@ export default async function handler(req, res) {
     const admRows = admixtures.map((a, index) => [
       recordId,
       timestamp,
-      studentName,
+      clientName,
       contactEmail,
       index + 1,
       a.name || "",
@@ -436,7 +432,7 @@ export default async function handler(req, res) {
     const scmRows = scms.map((s, index) => [
       recordId,
       timestamp,
-      studentName,
+      clientName,
       contactEmail,
       index + 1,
       s.name || "",
