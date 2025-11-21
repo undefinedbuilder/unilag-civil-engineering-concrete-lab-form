@@ -1,243 +1,355 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UNILAG Concrete Laboratory – Mix Intake Form</title>
-  <link rel="stylesheet" href="/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
-</head>
-<body>
-  <!-- SECTION: Top status banner (announces success/error messages and auto-hides) -->
-  <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNILAG Concrete Research Mix Intake Form</title>
 
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script src="script.js" defer></script>
+</head>
+
+<body>
   <main class="container">
-    <!-- SECTION: Page Header & Branding -->
+    <!-- HEADER -->
     <header class="header">
-      <div class="logo-box">
-        <img src="/unilag-logo.png" alt="UNILAG Logo" class="logo">
-      </div>
-      <div class="brand">
-        <h1>The Department of Civil & Environmental Engineering</h1>
-        <h2>CONCRETE LABORATORY, UNIVERSITY OF LAGOS</h2>
-      </div>
-      <p class="notice"><strong>FOR COMPONENTS THAT ARE NOT IN THE MIX PROPORTIONS, PLEASE ENTER 0.</strong></p>
+      <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
+      <h1>The Department of Civil &amp; Environmental Engineering</h1>
+      <h2>CONCRETE LABORATORY, UNIVERSITY OF LAGOS</h2>
+      <p class="notice">
+        <strong>NOTE:</strong> For research purposes only. Enter 0 for any component that is not used in kg/m³ mode.
+      </p>
     </header>
 
-    <!-- SECTION: Main Data Capture Form -->
-    <form id="mixForm" novalidate>
-      <!-- SUBSECTION: Client / Project -->
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+      <!-- FORM -->
       <section class="card">
-        <h3>Client / Project Details</h3>
-        <div class="grid two">
-          <label>
-            <span class="field-label">Client / Requester Name <sup class="req">*</sup></span>
-            <input type="text" name="clientName" required placeholder="Client Name" />
-          </label>
-          <label>
-            <span class="field-label">Project / Site <sup class="req">*</sup></span>
-            <input type="text" name="projectSite" required placeholder="Project or Site" />
-          </label>
-          <label>
-            <span class="field-label">Contact Email <sup class="req">*</sup></span>
-            <input type="email" name="email" required placeholder="Email Address" />
-          </label>
-          <label>
-            <span class="field-label">Contact Phone <sup class="req">*</sup></span>
-            <input type="tel" name="phone" required placeholder="Phone Number" />
-          </label>
+        <h3>Student Research Mix Form</h3>
+
+        <div id="form-error-summary" class="error-summary"></div>
+
+        <form id="mix-form">
+          <!-- STUDENT AND PROJECT DETAILS -->
+          <h4 class="section-title">Student &amp; Project Details</h4>
+
+          <div class="grid two">
+            <label>
+              <span class="label-line">
+                Student Name <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="studentName" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Matric / Reg. No. <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="matricNo" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Institution <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="institution" placeholder="e.g., University of Lagos" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Supervisor <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="supervisor" />
+            </label>
+          </div>
 
           <label class="full">
-            <span class="field-label">Crushing Date <sup class="req">*</sup></span>
-            <input type="date" name="crushingDate" id="crushingDate" required />
+            <span class="label-line">
+              Project Title <span class="required-asterisk">*</span>
+            </span>
+            <input type="text" id="projectTitle" />
           </label>
-        </div>
+
+          <!-- MIX DESIGN OVERVIEW -->
+          <h4 class="section-title">Mix Design Overview</h4>
+
+          <div class="grid two">
+            <label>
+              <span class="label-line">
+                Crushing Date <span class="required-asterisk">*</span>
+              </span>
+              <input type="date" id="crushDate" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Concrete Type <span class="required-asterisk">*</span>
+              </span>
+              <select id="concreteType">
+                <option value="">-- Select --</option>
+                <option>Normal strength</option>
+                <option>High strength</option>
+                <option>Self-compacting</option>
+                <option>Fiber-reinforced</option>
+                <option>Lightweight</option>
+                <option>Other</option>
+              </select>
+            </label>
+
+            <label id="concreteTypeOtherWrapper" style="display:none;">
+              <span class="label-line">
+                Specify Concrete Type <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="concreteTypeOther" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Cement Type <span class="required-asterisk">*</span>
+              </span>
+              <select id="cementType">
+                <option value="">-- Select --</option>
+                <option>OPC</option>
+                <option>Rapid Hardening</option>
+                <option>Portland Limestone</option>
+                <option>Blended (CEM II)</option>
+                <option>Other</option>
+              </select>
+            </label>
+
+            <label id="cementTypeOtherWrapper" style="display:none;">
+              <span class="label-line">
+                Specify Cement Type <span class="required-asterisk">*</span>
+              </span>
+              <input type="text" id="cementTypeOther" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Slump / Flow (mm) <span class="required-asterisk">*</span>
+              </span>
+              <input type="number" min="0" id="slump" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Age (days) <span class="required-asterisk">*</span>
+              </span>
+              <input type="number" min="1" id="ageDays" />
+            </label>
+
+            <label>
+              <span class="label-line">
+                Number of Cubes to be Crushed<span class="required-asterisk">*</span>
+              </span>
+              <input type="number" min="1" id="cubesCount" />
+            </label>
+          </div>
+
+          <label class="full">
+            <span class="label-line">
+              General Notes <span class="required-asterisk">*</span>
+            </span>
+            <textarea id="notes" rows="3"></textarea>
+          </label>
+
+          <!-- MIX INPUT MODE -->
+          <h4 class="section-title">Mix Input Mode</h4>
+
+          <div class="grid two">
+            <label>
+              <span class="label-line">
+                <input type="radio" name="inputMode" value="kg" id="modeKg" checked />
+                &nbsp; Input Material Quantities in kg/m³
+              </span>
+            </label>
+            <label>
+              <span class="label-line">
+                <input type="radio" name="inputMode" value="ratio" id="modeRatio" />
+                &nbsp; Input Material Quantities in Ratios
+              </span>
+            </label>
+          </div>
+
+          <!-- MATERIAL QUANTITIES (KG/M3) -->
+          <h4 id="kgHeading" class="section-title">Material Quantities – Kg/m³</h4>
+
+          <div id="kgInputs">
+            <div class="grid two">
+              <label>
+                <span class="label-line">
+                  Cement (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="cementContent" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Water (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="waterContent" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Fine Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="fineAgg" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Medium Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="mediumAgg" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Coarse Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="coarseAgg" />
+              </label>
+            </div>
+
+            <div id="wcratio-box" class="wc-box">
+              <strong>Water–Cement Ratio (from kg/m³):</strong>
+              <span id="wcRatioValue">0.00</span>
+            </div>
+
+            <div id="mixratio-box" class="wc-box">
+              <strong>Normalized Mix Ratio (by cement, from kg/m³):</strong>
+              <span id="mixRatioValue">–</span>
+            </div>
+          </div>
+
+          <!-- MATERIAL QUANTITIES (RATIOS) -->
+          <h4 id="ratioHeading" class="section-title">Material Quantities – Ratios(by Cement)</h4>
+
+          <div id="ratioInputs" style="display:none;">
+            <div class="grid two">
+              <label>
+                <span class="label-line">
+                  Cement <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.01" id="ratioCement" value="1" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Fine Aggregate <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.01" id="ratioFine" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Medium Aggregate <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.01" id="ratioMedium" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Coarse Aggregate <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.01" id="ratioCoarse" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Water <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.01" id="ratioWater" />
+              </label>
+            </div>
+          </div>
+
+          <!-- CHEMICAL ADMIXTURES -->
+          <h4 class="section-title">Chemical Admixtures</h4>
+          <p class="subtle">If none, you may enter one row and type “Nil”.</p>
+
+          <div id="admixtures-container" class="dynamic-group"></div>
+
+          <button type="button" id="add-admixture-btn" class="btn-primary small">
+            + Add Admixture
+          </button>
+
+          <!-- PARTIAL CEMENT REPLACEMENTS -->
+          <h4 class="section-title">Partial Cement Replacements (SCMs)</h4>
+          <p class="subtle">If none, you may enter one row and type “Nil”.</p>
+
+          <div id="scms-container" class="dynamic-group"></div>
+
+          <button type="button" id="add-scm-btn" class="btn-primary small">
+            + Add SCM
+          </button>
+
+          <!-- ACTIONS AND STATUS -->
+          <div class="actions two-cols">
+            <button type="submit" id="save-mix-btn" class="btn-submit">
+              Submit, Save &amp; Generate PDF
+            </button>
+            <button type="button" id="reset-form-btn" class="btn-secondary">
+              Clear Form
+            </button>
+          </div>
+
+          <p id="status-line" class="status-pill"></p>
+        </form>
       </section>
 
-      <!-- SUBSECTION: Cement Information -->
+      <!-- SAVED MIXES TABLE -->
       <section class="card">
-        <h3>Cement Information</h3>
+        <h3>Saved Mixes (Local Only)</h3>
 
-        <div class="grid one">
-          <label>
-            <span class="field-label">Cement Brand <sup class="req">*</sup></span>
-            <select name="cementBrand" id="cementBrand" required>
-              <option value="" disabled selected>Select Brand</option>
-              <option>DANGOTE</option>
-              <option>LAFARGE</option>
-              <option>BUA</option>
-            </select>
-          </label>
+        <div class="table-actions">
+          <button id="export-csv-btn" class="btn-primary small">Export CSV</button>
+          <button id="clear-all-btn" class="btn-primary small outline">Clear All</button>
         </div>
 
-        <div class="grid two">
-          <label>
-            <span class="field-label">Manufacturer's Cement Type <sup class="req">*</sup></span>
-            <select name="manufacturerCementType" id="manufacturerCementType" required disabled>
-              <option value="" disabled selected>Select Manufacturer's Type</option>
-            </select>
-          </label>
-
-          <label>
-            <span class="field-label">Cement Type <sup class="req">*</sup></span>
-            <select name="cementType" required>
-              <option value="" disabled selected>Select Cement Type</option>
-              <option>CEM I 52.5N</option>
-              <option>CEM I 32.5R</option>
-              <option>CEM II 32.5R</option>
-              <option>CEM II 32.5N</option>
-              <option>CEM II 42.5R</option>
-              <option>CEM II 42.5N</option>
-            </select>
-          </label>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>App No</th>
+                <th>Mode</th>
+                <th>Student</th>
+                <th>Type</th>
+                <th>W/C</th>
+                <th>Saved</th>
+              </tr>
+            </thead>
+            <tbody id="mixes-table-body">
+              <tr><td colspan="6" class="no-data">No mixes saved yet.</td></tr>
+            </tbody>
+          </table>
         </div>
+        <p class="subtle small-note">Click a row to load that mix back into the form.</p>
       </section>
+    </div>
 
-      <!-- SUBSECTION: Superplasticizer -->
-      <section class="card">
-        <h3>Superplasticizer Information</h3>
-        <div class="grid one">
-          <label>
-            <span class="field-label">Superplasticizer Name (enter “Nil” if none)<sup class="req">*</sup></span>
-            <input type="text" id="spName" name="spName" required placeholder="Superplasticizer Name" />
-          </label>
-        </div>
-      </section>
-
-      <!-- SUBSECTION: Mix Composition -->
-      <section class="card">
-        <h3>Mix Composition (kg/m³)</h3>
-        <div class="grid three">
-          <label>
-            <span class="field-label">Cement (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="cement" id="cement" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Blast Furnace Slag (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="slag" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Fly Ash (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="flyAsh" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Silica Fume (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="silicaFume" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Limestone Filler (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="limestone" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Water (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="water" id="water" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Superplasticizer (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="superplasticizer" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Coarse Aggregate (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="coarseAgg" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Fine Aggregate (kg/m³) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="fineAgg" required placeholder="0" />
-          </label>
-        </div>
-
-        <!-- SUBSECTION: Live w/c ratio; updated as water/cement change -->
-        <div class="metric-row">
-          <span class="metric-label">Derived w/c ratio:</span>
-          <span id="wcDisplay" class="metric-value">0.00</span>
-        </div>
-      </section>
-
-      <!-- SUBSECTION: Slump -->
-      <section class="card">
-        <h3>Slump / Workability</h3>
-        <div class="grid one">
-          <label>
-            <span class="field-label">Slump (mm) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="slump" required placeholder="0" />
-          </label>
-        </div>
-      </section>
-
-      <!-- SUBSECTION: Age & Target & No of Cubes -->
-      <section class="card">
-        <h3>Age & Target Strength Information</h3>
-        <div class="grid three">
-          <label>
-            <span class="field-label">Age (days) <sup class="req">*</sup></span>
-            <input type="number" step="1" min="1" name="ageDays" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Target Compressive Strength (MPa) <sup class="req">*</sup></span>
-            <input type="number" step="any" min="0" name="targetMPa" required placeholder="0" />
-          </label>
-          <label>
-            <span class="field-label">Number of cubes to be crushed <sup class="req">*</sup></span>
-            <input type="number" step="1" min="1" name="cubesCount" required placeholder="0" />
-          </label>
-        </div>
-      </section>
-
-      <!-- SUBSECTION: Notes -->
-      <section class="card">
-        <h3>Additional Notes</h3>
-        <div class="grid one">
-          <label>
-            <span class="field-label">Notes (enter “Nil” if none) <sup class="req">*</sup></span>
-            <textarea name="notes" rows="3" required placeholder="Nil"></textarea>
-          </label>
-        </div>
-      </section>
-
-      <!-- SUBSECTION: Validation & Status Messaging -->
-      <p id="validationNote" class="pre-note error hidden">
-        <strong>Please complete all fields</strong> (use 0 where not applicable).
-      </p>
-
-      <p id="preButtonNote" class="pre-note hidden">
-        <strong>Note:</strong> Data was <strong>NOT</strong> saved. You can retry.
-      </p>
-
-      <!-- SUBSECTION: Form Actions -->
-      <footer id="actionsBar" class="actions">
-        <button type="submit" id="submitBtn">Submit, Save & Download PDF</button>
-        <button type="button" id="retryBtn" class="btn-secondary hidden" aria-hidden="true">Retry Save</button>
-        <p id="status" class="status" role="status" aria-live="polite"></p>
-      </footer>
-    </form>
-
-    <!-- SECTION: Application Number Modal (shown only after successful save & PDF) -->
+    <!-- APPLICATION NUMBER MODAL -->
     <div id="appModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-card">
+      <div class="modal-card research">
         <div class="modal-header">
           <h4 id="modalTitle">Application Number</h4>
-          <button id="modalClose" class="modal-x" type="button" aria-label="Close dialog">×</button>
+          <button id="modalClose" type="button" class="modal-x" aria-label="Close dialog">×</button>
         </div>
         <div class="modal-body">
-          <div class="modal-number" id="modalNumber">UNILAG-CL-A000001</div>
-          <div class="modal-note">Please bring this application number to the lab.</div>
+          <div class="modal-number" id="modalNumber">UNILAG-CR-K000001</div>
+          <div class="modal-note">
+            Please keep this number safe and quote it in all discussions with the Concrete Laboratory.
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- SECTION: Footer -->
+    <!-- FOOTER -->
     <footer class="footer">
-      <p>&copy; <span id="year"></span> Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.</p>
+      © <span id="year"></span> Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
     </footer>
   </main>
-
-  <!-- SECTION: App Script & Analytics loader -->
-  <script src="/script.js" defer></script>
-  <script>
-    window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
-
-

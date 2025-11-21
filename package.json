@@ -1,8 +1,8 @@
 {
-  "name": "concrete-lab-form",
+  "name": "concrete-research-lab-form",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "dependencies": {
     "googleapis": "^133.0.0"
   }

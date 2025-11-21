@@ -1,378 +1,546 @@
-// SECTION: Lightweight analytics wrapper; safely no-ops if Vercel Analytics isn't present
-function track(name, data = {}) {
-  try {
-    if (typeof window !== 'undefined' && typeof window.va === 'function') {
-      window.va('event', { name, ...data });
-    }
-  } catch (_) {}
-}
+/* ------------------------------------------------------------
+   GLOBAL CONSTANTS AND SIMPLE HELPERS
+------------------------------------------------------------ */
+const STORAGE_KEY = "concrete-mixes";
+let logoImageDataUrl = null;
 
-// SECTION: Validation utilities used to gate submission and show inline errors
-function allFieldsFilled(form) {
-  const fields = form.querySelectorAll('input, select, textarea');
-  for (const el of fields) {
-    if (el.type === 'hidden') continue;
-    if (!el.checkValidity()) return false;
-    if (el.value === '' || el.value === null || el.value === undefined) return false;
-  }
-  return true;
-}
-
-function highlightInvalids(form) {
-  let firstInvalid = null;
-  const fields = form.querySelectorAll('input, select, textarea');
-  fields.forEach(el => {
-    el.classList.remove('invalid');
-    el.removeAttribute('aria-invalid');
-    const msg = el.parentElement.querySelector('.invalid-message');
-    if (msg) msg.remove();
-
-    const empty = (el.value === '' || el.value === null || el.value === undefined);
-    if (!el.checkValidity() || empty) {
-      el.classList.add('invalid');
-      el.setAttribute('aria-invalid', 'true');
-      if (!firstInvalid) firstInvalid = el;
-
-      const small = document.createElement('div');
-      small.className = 'invalid-message';
-      small.textContent = 'Please fill this field (use 0 if not applicable).';
-      el.parentElement.appendChild(small);
-    }
-  });
-  if (firstInvalid) firstInvalid.focus({ preventScroll: true });
-  return !!firstInvalid;
-}
-
-function wireInvalidClearing(form) {
-  form.addEventListener('input', e => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement)) return;
-    if (el.matches('input, select, textarea')) {
-      if (el.value !== '' && el.checkValidity()) {
-        el.classList.remove('invalid');
-        el.removeAttribute('aria-invalid');
-        const msg = el.parentElement.querySelector('.invalid-message');
-        if (msg) msg.remove();
-      }
-    }
-  });
-}
-
-// SECTION: Top banner controller for transient success/error notifications
-const banner = (() => {
-  const el = document.getElementById('banner');
-  let hideTimer = null;
-
-  function show(message, kind = 'ok', autoHideMs = 4000) {
-    if (!el) return;
-    el.textContent = message || '';
-    el.classList.remove('hidden', 'ok', 'err');
-    el.classList.add(kind === 'err' ? 'err' : 'ok');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (hideTimer) clearTimeout(hideTimer);
-    if (autoHideMs) {
-      hideTimer = setTimeout(() => {
-        el.classList.add('hidden');
-        el.textContent = '';
-      }, autoHideMs);
-    }
-  }
-
-  function hide() {
-    if (!el) return;
-    el.classList.add('hidden');
-    el.textContent = '';
-  }
-
-  return { show, hide };
-})();
-
-// SECTION: General utilities (image loading, date handling, filenames, derived metrics)
 function loadImageAsDataURL(path) {
   return fetch(path)
     .then(resp => {
-      if (!resp.ok) throw new Error('image load failed');
+      if (!resp.ok) throw new Error("image load failed");
       return resp.blob();
     })
-    .then(blob => new Promise((resolve) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.readAsDataURL(blob);
-    }))
+    .then(
+      blob =>
+        new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        })
+    )
     .catch(() => null);
-}
-
-function setDateToToday(inputEl) {
-  const tzOffset = new Date().getTimezoneOffset() * 60000;
-  const todayLocal = new Date(Date.now() - tzOffset).toISOString().slice(0,10);
-  inputEl.value = todayLocal;
 }
 
 function sanitizeFilename(name) {
   return String(name)
-    .replace(/[\\/:*?"<>|]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-function computeWc(water, cement) {
-  const w = Number(water);
-  const c = Number(cement);
-  if (!isFinite(w) || !isFinite(c) || c <= 0) return 0;
-  return w / c;
+function setDateToToday(inputEl) {
+  const tzOffset = new Date().getTimezoneOffset() * 60000;
+  const todayLocal = new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
+  inputEl.value = todayLocal;
 }
 
-// SECTION: Brand to Manufacturer Types mapping used to populate second select
-const MANUFACTURER_TYPES = {
-  DANGOTE: ['Dangote 3X', 'Dangote BlocMaster', 'Dangote Falcon'],
-  LAFARGE: [
-    'Lafarge Supaset',
-    'Lafarge EcoPlanet Unicem',
-    'Lafarge Elephant Supaset',
-    'Lafarge Elephant Classic Cement',
-    'Lafarge Powermax',
-    'Lafarge AshakaCem'
-  ],
-  BUA: ['BUA']
-};
+function setStatusLine(message, kind = "info") {
+  const el = document.getElementById("status-line");
+  if (!el) return;
 
-// SECTION: Main bootstrapping — wire UI, validation, submission, modal, and PDF generation
-document.addEventListener('DOMContentLoaded', () => {
-  // SUBSECTION: Footer year and default date
-  document.getElementById('year').textContent = new Date().getFullYear();
-  const crushingDate = document.getElementById('crushingDate');
-  setDateToToday(crushingDate);
-
-  // SUBSECTION: Brand-driven select and live w/c ratio
-  const brandSelect = document.getElementById('cementBrand');
-  const manuSelect = document.getElementById('manufacturerCementType');
-  const waterEl = document.getElementById('water');
-  const cementEl = document.getElementById('cement');
-  const wcDisplay = document.getElementById('wcDisplay');
-
-  function updateWcDisplay() {
-    const wc = computeWc(waterEl.value, cementEl.value);
-    wcDisplay.textContent = (wc || 0).toFixed(2);
-  }
-  ['input','change'].forEach(evt => {
-    waterEl.addEventListener(evt, updateWcDisplay);
-    cementEl.addEventListener(evt, updateWcDisplay);
-  });
-  updateWcDisplay();
-
-  function resetManuSelect() {
-    manuSelect.innerHTML = '';
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.disabled = true;
-    opt.selected = true;
-    opt.textContent = "Select Manufacturer's Type";
-    manuSelect.appendChild(opt);
+  // if no message, hide the pill and stop
+  if (!message) {
+    el.textContent = "";
+    el.style.display = "none";
+    el.classList.remove("status-success", "status-error", "status-info");
+    return;
   }
 
-  brandSelect.addEventListener('change', () => {
-    const brand = brandSelect.value;
-    resetManuSelect();
+  // show pill with the right style
+  el.style.display = "block";
+  el.textContent = message;
+  el.classList.remove("status-success", "status-error", "status-info");
+  if (kind === "success") el.classList.add("status-success");
+  else if (kind === "error") el.classList.add("status-error");
+  else el.classList.add("status-info");
+}
 
-    if (!brand || !MANUFACTURER_TYPES[brand]) {
-      manuSelect.disabled = true;
-      return;
+
+/* ------------------------------------------------------------
+   DYNAMIC ROWS FOR ADMIXTURES AND SCMS
+------------------------------------------------------------ */
+function createAdmixtureRow(data = {}) {
+  const row = document.createElement("div");
+  row.className = "dynamic-row";
+
+  row.innerHTML = `
+    <label>
+      <span class="label-line">Admixture Name <span class="required-asterisk">*</span></span>
+      <input type="text" placeholder="e.g. SP 1000" name="adm_name" value="${data.name || ""}">
+    </label>
+
+    <label>
+      <span class="label-line">Type <span class="required-asterisk">*</span></span>
+      <input type="text" placeholder="e.g. PCE or Nil" name="adm_type" value="${data.type || ""}">
+    </label>
+
+    <label>
+      <span class="label-line">Dosage (L/100kg of Cement) <span class="required-asterisk">*</span></span>
+      <input type="number" name="adm_dosage" value="${data.dosage || ""}">
+    </label>
+
+    <button type="button" class="remove-row-btn">×</button>
+  `;
+
+  row.querySelector(".remove-row-btn").onclick = () => row.remove();
+  return row;
+}
+
+function createScmRow(data = {}) {
+  const row = document.createElement("div");
+  row.className = "dynamic-row";
+
+  row.innerHTML = `
+    <label>
+      <span class="label-line">SCM Name <span class="required-asterisk">*</span></span>
+      <input type="text" placeholder="e.g. Fly Ash" name="scm_name" value="${data.name || ""}">
+    </label>
+
+    <label>
+      <span class="label-line">Percent (%) <span class="required-asterisk">*</span></span>
+      <input type="text" name="scm_percent" value="${data.percent || ""}">
+    </label>
+
+    <label>
+      <span class="label-line">Quantity (kg/m³) <span class="required-asterisk">*</span></span>
+      <input type="number" name="scm_quantity" value="${data.quantity || ""}">
+    </label>
+
+    <button type="button" class="remove-row-btn">×</button>
+  `;
+
+  row.querySelector(".remove-row-btn").onclick = () => row.remove();
+  return row;
+}
+
+/* ------------------------------------------------------------
+   WATER–CEMENT RATIO AND MIX RATIO (KG MODE)
+------------------------------------------------------------ */
+function updateWCRatio() {
+  const cement = parseFloat(document.getElementById("cementContent").value);
+  const water = parseFloat(document.getElementById("waterContent").value);
+  let ratio = 0;
+  if (!isNaN(cement) && cement > 0 && !isNaN(water)) {
+    ratio = water / cement;
+  }
+  document.getElementById("wcRatioValue").textContent = ratio.toFixed(2);
+  return ratio;
+}
+
+function updateMixRatio() {
+  const cement = parseFloat(document.getElementById("cementContent").value);
+  const water = parseFloat(document.getElementById("waterContent").value);
+  const fine = parseFloat(document.getElementById("fineAgg").value);
+  const medium = parseFloat(document.getElementById("mediumAgg").value);
+  const coarse = parseFloat(document.getElementById("coarseAgg").value);
+  const el = document.getElementById("mixRatioValue");
+
+  if (!el) {
+    return "";
+  }
+
+  if (isNaN(cement) || cement <= 0 || [water, fine, medium, coarse].some(v => isNaN(v))) {
+    el.textContent = "–";
+    return "";
+  }
+
+  const fineRatio = fine / cement;
+  const mediumRatio = medium / cement;
+  const coarseRatio = coarse / cement;
+  const waterRatio = water / cement;
+
+  const ratioText = `1 : ${fineRatio.toFixed(2)} : ${mediumRatio.toFixed(2)} : ${coarseRatio.toFixed(
+    2
+  )} : ${waterRatio.toFixed(2)}`;
+
+  el.textContent = ratioText;
+  return ratioText;
+}
+
+/* ------------------------------------------------------------
+   VALIDATION
+------------------------------------------------------------ */
+function validateForm() {
+  const commonFields = [
+    "studentName",
+    "matricNo",
+    "institution",
+    "supervisor",
+    "projectTitle",
+    "crushDate",
+    "concreteType",
+    "cementType",
+    "slump",
+    "ageDays",
+    "cubesCount",
+    "notes"
+  ];
+
+  let missing = [];
+  let firstInvalid = null;
+
+  document.querySelectorAll(".error").forEach(e => e.classList.remove("error"));
+
+  commonFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.classList.add("error");
+      missing.push(id);
+      if (!firstInvalid) firstInvalid = el;
     }
-
-    MANUFACTURER_TYPES[brand].forEach(v => {
-      const o = document.createElement('option');
-      o.textContent = v;
-      o.value = v;
-      o.selected = false;
-      manuSelect.appendChild(o);
-    });
-    manuSelect.disabled = false;
   });
 
-  // SUBSECTION: Form, status, actions, and modal references
-  const form = document.getElementById('mixForm');
-  wireInvalidClearing(form);
-  const status = document.getElementById('status');
-  const submitBtn = document.getElementById('submitBtn');
-  const retryBtn = document.getElementById('retryBtn');
-  const actionsBar = document.getElementById('actionsBar');
-  const preButtonNote = document.getElementById('preButtonNote');
-  const validationNote = document.getElementById('validationNote');
-
-  const modal = document.getElementById('appModal');
-  const modalNumber = document.getElementById('modalNumber');
-  const modalClose = document.getElementById('modalClose');
-
-  // SUBSECTION: Ensure modal is hidden on initial load
-  if (modal) {
-    modal.classList.add('hidden');
-  }
-
-  // SUBSECTION: Small helpers for toggling UI state
-  function setStatus(msg, kind) {
-    status.textContent = msg || '';
-    status.classList.remove('ok','err');
-    if (kind === 'ok') status.classList.add('ok');
-    if (kind === 'err') status.classList.add('err');
-  }
-  function showRetry(show) {
-    retryBtn.classList.toggle('hidden', !show);
-    retryBtn.setAttribute('aria-hidden', show ? 'false' : 'true');
-    actionsBar.classList.toggle('two-cols', !!show);
-  }
-  function showPreNote(show) {
-    preButtonNote.classList.toggle('hidden', !show);
-  }
-  function showValidationNote(show) {
-    validationNote.classList.toggle('hidden', !show);
-  }
-  function openModal(appNo) {
-    if (!appNo) return;
-    modalNumber.textContent = appNo;
-    setTimeout(() => modal.classList.remove('hidden'), 100);
-    track('app_number_shown');
-  }
-  function closeModal() {
-    modal.classList.add('hidden');
-  }
-
-  // SUBSECTION: Modal interactions (click outside, ESC, header button)
-  modalClose.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  window.addEventListener('keydown', (e) => {
-    if (!modal.classList.contains('hidden') && e.key === 'Escape') closeModal();
-  });
-
-  // SUBSECTION: Main submit handler — validates, posts to API, handles save failure/success and PDF
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    setStatus('', null);
-    banner.hide();
-    showRetry(false);
-    showPreNote(false);
-    showValidationNote(false);
-    closeModal();
-
-    const hasInvalids = highlightInvalids(form);
-    if (hasInvalids || !allFieldsFilled(form)) {
-      setStatus('', 'err');
-      showValidationNote(true);
-      track('form_validation_error');
-      return;
+  if (document.getElementById("concreteType").value === "Other") {
+    const other = document.getElementById("concreteTypeOther").value.trim();
+    if (!other) {
+      document.getElementById("concreteTypeOther").classList.add("error");
+      missing.push("Custom Concrete Type");
+      if (!firstInvalid) firstInvalid = document.getElementById("concreteTypeOther");
     }
+  }
 
-    const data = Object.fromEntries(new FormData(form).entries());
-    const numericKeys = [
-      'cement','slag','flyAsh','silicaFume','limestone','water','superplasticizer','coarseAgg','fineAgg',
-      'slump','ageDays','targetMPa','cubesCount'
+  if (document.getElementById("cementType").value === "Other") {
+    const other = document.getElementById("cementTypeOther").value.trim();
+    if (!other) {
+      document.getElementById("cementTypeOther").classList.add("error");
+      missing.push("Custom Cement Type");
+      if (!firstInvalid) firstInvalid = document.getElementById("cementTypeOther");
+    }
+  }
+
+  const inputModeEl = document.querySelector('input[name="inputMode"]:checked');
+  const inputMode = inputModeEl ? inputModeEl.value : "kg";
+
+  if (inputMode === "kg") {
+    const kgFields = [
+      "cementContent",
+      "waterContent",
+      "fineAgg",
+      "mediumAgg",
+      "coarseAgg"
     ];
-    numericKeys.forEach(k => data[k] = Number(data[k]));
-
-    submitBtn.disabled = true;
-    setStatus('Submitting...', null);
-    track('form_submit_attempt');
-
-    let out;
-    try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      out = await res.json();
-      if (!out.success || !out.applicationNumber) throw new Error(out.message || 'Unknown error');
-    } catch {
-      // Save failed ⇒ do not generate PDF or show application number; invite retry
-      setStatus('', null);
-      showPreNote(true);
-      showRetry(true);
-      submitBtn.disabled = false;
-      track('form_submit_error', { reason: 'save_failed' });
-      return;
-    }
-
-    // Save succeeded ⇒ fetch logo, generate PDF, show app number modal, reset form
-    const applicationNumber = out.applicationNumber;
-
-    try {
-      const logoDataURL = await loadImageAsDataURL('/unilag-logo.png');
-      await generatePDF({ ...data, applicationNumber }, logoDataURL);
-
-      openModal(applicationNumber);
-
-      form.reset();
-      resetManuSelect();
-      manuSelect.disabled = true;
-      setDateToToday(crushingDate);
-      updateWcDisplay();
-
-      setStatus('PDF downloaded and Data Saved.', 'ok');
-      banner.show('Success: Data saved and PDF downloaded.', 'ok');
-      showRetry(false);
-      showPreNote(false);
-      track('form_submit_success');
-    } catch {
-      setStatus('PDF generation failed. Please try again.', 'err');
-      banner.show('PDF generation failed. Please try again.', 'err');
-      track('pdf_generation_error');
-    } finally {
-      submitBtn.disabled = false;
-    }
-
-    // SUBSECTION: Retry handler wires the same payload to the API when initial save fails
-    retryBtn.onclick = async () => {
-      retryBtn.disabled = true;
-      submitBtn.disabled = true;
-      setStatus('Retrying save to Google Sheets...', null);
-      track('retry_attempt');
-
-      try {
-        const res = await fetch('/api/submit', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        const retryOut = await res.json();
-        if (!retryOut.success || !retryOut.applicationNumber) throw new Error(retryOut.message || 'Unknown error');
-
-        const appNo = retryOut.applicationNumber;
-        const logoDataURL = await loadImageAsDataURL('/unilag-logo.png');
-        await generatePDF({ ...data, applicationNumber: appNo }, logoDataURL);
-        openModal(appNo);
-
-        setStatus('Data saved and PDF downloaded.', 'ok');
-        banner.show('Data saved and PDF downloaded.', 'ok');
-        showRetry(false);
-        showPreNote(false);
-        track('retry_success');
-      } catch {
-        setStatus('Retry failed. Please try again later.', 'err');
-        banner.show('Retry failed. Please try again later.', 'err');
-        showRetry(true);
-        showPreNote(true);
-        track('retry_error');
-      } finally {
-        retryBtn.disabled = false;
-        submitBtn.disabled = false;
+    kgFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) {
+        el.classList.add("error");
+        missing.push(id);
+        if (!firstInvalid) firstInvalid = el;
       }
-    };
-  });
-});
+    });
+  } else {
+    const ratioFields = [
+      "ratioCement",
+      "ratioFine",
+      "ratioMedium",
+      "ratioCoarse",
+      "ratioWater"
+    ];
+    ratioFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) {
+        el.classList.add("error");
+        missing.push(id);
+        if (!firstInvalid) firstInvalid = el;
+      }
+    });
+  }
 
-// SECTION: One-page PDF generator using jsPDF; draws header, sections, and an office-use box
-async function generatePDF(d, logoDataURL) {
+  const admFirst = document.querySelector("#admixtures-container .dynamic-row");
+  if (admFirst) {
+    admFirst.querySelectorAll("input").forEach(inp => {
+      if (!inp.value.trim()) {
+        inp.classList.add("error");
+        missing.push("Admixture field");
+        if (!firstInvalid) firstInvalid = inp;
+      }
+    });
+  }
+
+  const scmFirst = document.querySelector("#scms-container .dynamic-row");
+  if (scmFirst) {
+    scmFirst.querySelectorAll("input").forEach(inp => {
+      if (!inp.value.trim()) {
+        inp.classList.add("error");
+        missing.push("SCM field");
+        if (!firstInvalid) firstInvalid = inp;
+      }
+    });
+  }
+
+  const summary = document.getElementById("form-error-summary");
+
+  if (missing.length > 0) {
+    summary.style.display = "block";
+    summary.textContent = "Please fill the required fields.";
+    if (firstInvalid) firstInvalid.focus();
+    return false;
+  }
+
+  summary.style.display = "none";
+  return true;
+}
+
+/* ------------------------------------------------------------
+   COLLECT FORM DATA
+------------------------------------------------------------ */
+function collectFormData() {
+  const admixtures = [];
+  const scms = [];
+
+  document.querySelectorAll("#admixtures-container .dynamic-row").forEach(row => {
+    const name = row.querySelector('input[name="adm_name"]').value.trim();
+    const type = row.querySelector('input[name="adm_type"]').value.trim();
+    const dosage = row.querySelector('input[name="adm_dosage"]').value.trim();
+    if (name || type || dosage) {
+      admixtures.push({ name, type, dosage });
+    }
+  });
+
+  document.querySelectorAll("#scms-container .dynamic-row").forEach(row => {
+    const name = row.querySelector('input[name="scm_name"]').value.trim();
+    const percent = row.querySelector('input[name="scm_percent"]').value.trim();
+    const quantity = row.querySelector('input[name="scm_quantity"]').value.trim();
+    if (name || percent || quantity) {
+      scms.push({ name, percent, quantity });
+    }
+  });
+
+  const inputModeEl = document.querySelector('input[name="inputMode"]:checked');
+  const inputMode = inputModeEl ? inputModeEl.value : "kg";
+
+  let wcRatio = 0;
+  let mixRatioString = "";
+
+  if (inputMode === "kg") {
+    wcRatio = updateWCRatio();
+    mixRatioString = updateMixRatio();
+  } else {
+    const c = parseFloat(document.getElementById("ratioCement").value);
+    const f = parseFloat(document.getElementById("ratioFine").value);
+    const m = parseFloat(document.getElementById("ratioMedium").value);
+    const co = parseFloat(document.getElementById("ratioCoarse").value);
+    const w = parseFloat(document.getElementById("ratioWater").value);
+
+    if (!isNaN(c) && c > 0 && [f, m, co, w].every(v => !isNaN(v))) {
+      wcRatio = w / c;
+
+      const fineN = f / c;
+      const mediumN = m / c;
+      const coarseN = co / c;
+      const waterN = w / c;
+
+      mixRatioString = `1 : ${fineN.toFixed(2)} : ${mediumN.toFixed(2)} : ${coarseN.toFixed(
+        2
+      )} : ${waterN.toFixed(2)}`;
+    } else {
+      wcRatio = 0;
+      mixRatioString = "";
+    }
+  }
+
+  return {
+    inputMode,
+    studentName: document.getElementById("studentName").value.trim(),
+    matricNo: document.getElementById("matricNo").value.trim(),
+    institution: document.getElementById("institution").value.trim(),
+    supervisor: document.getElementById("supervisor").value.trim(),
+    projectTitle: document.getElementById("projectTitle").value.trim(),
+    crushDate: document.getElementById("crushDate").value,
+    concreteType:
+      document.getElementById("concreteType").value === "Other"
+        ? document.getElementById("concreteTypeOther").value.trim()
+        : document.getElementById("concreteType").value,
+    cementType:
+      document.getElementById("cementType").value === "Other"
+        ? document.getElementById("cementTypeOther").value.trim()
+        : document.getElementById("cementType").value,
+    slump: Number(document.getElementById("slump").value),
+    ageDays: Number(document.getElementById("ageDays").value),
+    cubesCount: Number(document.getElementById("cubesCount").value),
+    notes: document.getElementById("notes").value.trim(),
+    cementContent: Number(document.getElementById("cementContent").value),
+    waterContent: Number(document.getElementById("waterContent").value),
+    fineAgg: Number(document.getElementById("fineAgg").value),
+    mediumAgg: Number(document.getElementById("mediumAgg").value),
+    coarseAgg: Number(document.getElementById("coarseAgg").value),
+    ratioCement: Number(document.getElementById("ratioCement").value),
+    ratioFine: Number(document.getElementById("ratioFine").value),
+    ratioMedium: Number(document.getElementById("ratioMedium").value),
+    ratioCoarse: Number(document.getElementById("ratioCoarse").value),
+    ratioWater: Number(document.getElementById("ratioWater").value),
+    wcRatio,
+    mixRatioString,
+    admixtures,
+    scms
+  };
+}
+
+/* ------------------------------------------------------------
+   LOCAL STORAGE HELPERS
+------------------------------------------------------------ */
+function getLocalMixes() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+}
+
+function saveLocalMixes(mixes) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(mixes));
+}
+
+function saveLocal(mix) {
+  const mixes = getLocalMixes();
+  mixes.push(mix);
+  saveLocalMixes(mixes);
+}
+
+/* ------------------------------------------------------------
+   RENDER SAVED MIXES AND LOAD BACK
+------------------------------------------------------------ */
+function renderSavedMixes() {
+  const mixes = getLocalMixes();
+  const body = document.getElementById("mixes-table-body");
+
+  body.innerHTML = "";
+
+  if (mixes.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" class="no-data">No mixes saved yet.</td></tr>`;
+    return;
+  }
+
+  mixes.forEach((m, index) => {
+    const row = document.createElement("tr");
+    row.dataset.index = String(index);
+    row.innerHTML = `
+      <td>${m.applicationNumber || "-"}</td>
+      <td>${m.inputMode === "ratio" ? "Ratios" : "Kg/m³"}</td>
+      <td>${m.studentName}</td>
+      <td>${m.concreteType}</td>
+      <td>${(m.wcRatio ?? 0).toFixed(2)}</td>
+      <td>${m.timestamp}</td>
+    `;
+    body.appendChild(row);
+  });
+}
+
+/* ------------------------------------------------------------
+   APPLY INPUT MODE TO UI (updated to toggle headings too)
+------------------------------------------------------------ */
+function applyInputModeToUI(inputMode) {
+  const kgDiv = document.getElementById("kgInputs");
+  const ratioDiv = document.getElementById("ratioInputs");
+  const modeKg = document.getElementById("modeKg");
+  const modeRatio = document.getElementById("modeRatio");
+  const kgHeading = document.getElementById("kgHeading");
+  const ratioHeading = document.getElementById("ratioHeading");
+
+  if (inputMode === "ratio") {
+    if (ratioDiv) ratioDiv.style.display = "block";
+    if (kgDiv) kgDiv.style.display = "none";
+    if (ratioHeading) ratioHeading.style.display = "block";
+    if (kgHeading) kgHeading.style.display = "none";
+    if (modeRatio) modeRatio.checked = true;
+  } else {
+    if (ratioDiv) ratioDiv.style.display = "none";
+    if (kgDiv) kgDiv.style.display = "block";
+    if (ratioHeading) ratioHeading.style.display = "none";
+    if (kgHeading) kgHeading.style.display = "block";
+    if (modeKg) modeKg.checked = true;
+  }
+}
+
+function loadMixIntoForm(mix) {
+  document.getElementById("studentName").value = mix.studentName || "";
+  document.getElementById("matricNo").value = mix.matricNo || "";
+  document.getElementById("institution").value = mix.institution || "";
+  document.getElementById("supervisor").value = mix.supervisor || "";
+  document.getElementById("projectTitle").value = mix.projectTitle || "";
+  document.getElementById("crushDate").value = mix.crushDate || "";
+  document.getElementById("slump").value = mix.slump ?? "";
+  document.getElementById("ageDays").value = mix.ageDays ?? "";
+  document.getElementById("cubesCount").value = mix.cubesCount ?? "";
+  document.getElementById("notes").value = mix.notes || "";
+
+  const concreteSelect = document.getElementById("concreteType");
+  const concreteOtherWrapper = document.getElementById("concreteTypeOtherWrapper");
+  const concreteOther = document.getElementById("concreteTypeOther");
+  if ([...concreteSelect.options].some(o => o.value === mix.concreteType)) {
+    concreteSelect.value = mix.concreteType;
+    concreteOtherWrapper.style.display = "none";
+    concreteOther.value = "";
+  } else {
+    concreteSelect.value = "Other";
+    concreteOtherWrapper.style.display = "block";
+    concreteOther.value = mix.concreteType || "";
+  }
+
+  const cementSelect = document.getElementById("cementType");
+  const cementOtherWrapper = document.getElementById("cementTypeOtherWrapper");
+  const cementOther = document.getElementById("cementTypeOther");
+  if ([...cementSelect.options].some(o => o.value === mix.cementType)) {
+    cementSelect.value = mix.cementType;
+    cementOtherWrapper.style.display = "none";
+    cementOther.value = "";
+  } else {
+    cementSelect.value = "Other";
+    cementOtherWrapper.style.display = "block";
+    cementOther.value = mix.cementType || "";
+  }
+
+  const mode = mix.inputMode === "ratio" ? "ratio" : "kg";
+  applyInputModeToUI(mode);
+
+  if (mode === "kg") {
+    document.getElementById("cementContent").value = mix.cementContent ?? "";
+    document.getElementById("waterContent").value = mix.waterContent ?? "";
+    document.getElementById("fineAgg").value = mix.fineAgg ?? "";
+    document.getElementById("mediumAgg").value = mix.mediumAgg ?? "";
+    document.getElementById("coarseAgg").value = mix.coarseAgg ?? "";
+    updateWCRatio();
+    updateMixRatio();
+  } else {
+    document.getElementById("cementContent").value = "";
+    document.getElementById("waterContent").value = "";
+    document.getElementById("fineAgg").value = "";
+    document.getElementById("mediumAgg").value = "";
+    document.getElementById("coarseAgg").value = "";
+
+    document.getElementById("ratioCement").value = mix.ratioCement ?? 1;
+    document.getElementById("ratioFine").value = mix.ratioFine ?? "";
+    document.getElementById("ratioMedium").value = mix.ratioMedium ?? "";
+    document.getElementById("ratioCoarse").value = mix.ratioCoarse ?? "";
+    document.getElementById("ratioWater").value = mix.ratioWater ?? "";
+  }
+
+  const admContainer = document.getElementById("admixtures-container");
+  admContainer.innerHTML = "";
+  if (mix.admixtures && mix.admixtures.length) {
+    mix.admixtures.forEach(a => admContainer.appendChild(createAdmixtureRow(a)));
+  } else {
+    admContainer.appendChild(createAdmixtureRow());
+  }
+
+  const scmContainer = document.getElementById("scms-container");
+  scmContainer.innerHTML = "";
+  if (mix.scms && mix.scms.length) {
+    mix.scms.forEach(s => scmContainer.appendChild(createScmRow(s)));
+  } else {
+    scmContainer.appendChild(createScmRow());
+  }
+
+  setStatusLine(`Loaded mix with Application Number: ${mix.applicationNumber || "N/A"}`, "info");
+}
+
+/* ------------------------------------------------------------
+   PDF GENERATION
+------------------------------------------------------------ */
+async function generatePDF(data) {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'A4' });
+  const doc = new jsPDF({ unit: "pt", format: "A4" });
 
   const pageW = 595;
   const pageH = 842;
   const margin = 32;
   const gapX = 12;
 
-  // SUBSECTION: Header area with logo (or placeholder) and department text
   const topY = 40;
   const logoW = 56;
   const logoH = 56;
@@ -380,125 +548,674 @@ async function generatePDF(d, logoDataURL) {
   const textW = pageW - margin - textX;
 
   let drewLogo = false;
-  if (logoDataURL) {
+  if (logoImageDataUrl) {
     try {
-      doc.addImage(logoDataURL, 'PNG', margin, topY, logoW, logoH);
+      doc.addImage(logoImageDataUrl, "PNG", margin, topY, logoW, logoH);
       drewLogo = true;
-    } catch { drewLogo = false; }
+    } catch {
+      drewLogo = false;
+    }
   }
   if (!drewLogo) {
     doc.setDrawColor(100);
     doc.rect(margin, topY, logoW, logoH);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text('UNILAG', margin + logoW/2, topY + logoH/2 + 3, { align: 'center' });
+    doc.text("UNILAG", margin + logoW / 2, topY + logoH / 2 + 3, { align: "center" });
   }
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text('DEPARTMENT OF CIVIL AND ENVIRONMENTAL ENGINEERING', textX, topY + 14, { maxWidth: textW });
+  doc.text(
+    "DEPARTMENT OF CIVIL AND ENVIRONMENTAL ENGINEERING",
+    textX,
+    topY + 14,
+    { maxWidth: textW }
+  );
   doc.setFontSize(10);
-  doc.text('FACULTY OF ENGINEERING', textX, topY + 30, { maxWidth: textW });
-  doc.text('CONCRETE LABORATORY', textX, topY + 46, { maxWidth: textW });
+  doc.text("FACULTY OF ENGINEERING", textX, topY + 30, { maxWidth: textW });
+  doc.text("CONCRETE LABORATORY (RESEARCH MIX)", textX, topY + 46, { maxWidth: textW });
 
   doc.setDrawColor(40);
   doc.line(margin, topY + logoH + 10, pageW - margin, topY + logoH + 10);
 
-  // SUBSECTION: Document body with tightly packed rows
   const bodyStartY = topY + logoH + 26;
   let y = bodyStartY;
   const lh = 14;
   const leftColX = margin;
   const rightColX = 315;
 
-  doc.setFont('helvetica','normal');
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
-  doc.text(`Application Number: ${d.applicationNumber}`, margin, y); y += lh;
-  doc.text(`Date/Time Generated: ${new Date().toLocaleString()}`, margin, y); y += lh;
-  doc.text(`Crushing Date: ${d.crushingDate}`, margin, y); y += lh + 4;
 
-  // SUBSECTION: Client / Project
-  doc.setFont('helvetica','bold'); doc.text('Client / Project', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  doc.text(`Client: ${d.clientName}`, leftColX, y); y += lh;
-  doc.text(`Project/Site: ${d.projectSite}`, leftColX, y); y += lh;
-  doc.text(`Email: ${d.email}`, leftColX, y); y += lh;
-  doc.text(`Phone: ${d.phone}`, leftColX, y); y += lh + 4;
+  if (data.applicationNumber) {
+    doc.text(`Application Number: ${data.applicationNumber}`, margin, y);
+    y += lh;
+  }
+  doc.text(`Date/Time Generated: ${new Date().toLocaleString()}`, margin, y);
+  y += lh;
+  doc.text(`Crushing Date: ${data.crushDate}`, margin, y);
+  y += lh + 4;
 
-  // SUBSECTION: Cement Information
-  doc.setFont('helvetica','bold'); doc.text('Cement Information', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  doc.text(`Cement Brand: ${d.cementBrand}`, leftColX, y); y += lh;
-  doc.text(`Manufacturer's Cement Type: ${d.manufacturerCementType}`, leftColX, y);
-  doc.text(`Cement Type: ${d.cementType}`, rightColX, y); y += lh + 4;
+  doc.setFont("helvetica", "bold");
+  doc.text("Student & Project Details", leftColX, y);
+  y += lh;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Student: ${data.studentName}`, leftColX, y);
+  y += lh;
+  doc.text(`Matric / Reg. No.: ${data.matricNo}`, leftColX, y);
+  y += lh;
+  doc.text(`Institution: ${data.institution}`, leftColX, y);
+  y += lh;
+  doc.text(`Supervisor: ${data.supervisor}`, leftColX, y);
+  y += lh;
+  doc.text(`Project Title: ${data.projectTitle}`, leftColX, y);
+  y += lh + 4;
 
-  // SUBSECTION: Superplasticizer
-  doc.setFont('helvetica','bold'); doc.text('Superplasticizer Information', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  doc.text(`Superplasticizer Name: ${d.spName}`, leftColX, y); y += lh + 4;
+  doc.setFont("helvetica", "bold");
+  doc.text("Mix Design Overview", leftColX, y);
+  y += lh;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Concrete Type: ${data.concreteType}`, leftColX, y);
+  doc.text(`Cement Type: ${data.cementType}`, rightColX, y);
+  y += lh;
+  doc.text(`Slump / Flow (mm): ${data.slump}`, leftColX, y);
+  doc.text(`Age (days): ${data.ageDays}`, rightColX, y);
+  y += lh;
+  doc.text(`Number of Cubes: ${data.cubesCount}`, leftColX, y);
+  y += lh + 4;
 
-  // SUBSECTION: Mix Composition
-  doc.setFont('helvetica','bold'); doc.text('Mix Composition (kg/m³)', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  const rows = [
-    ['Cement', d.cement], ['Blast Furnace Slag', d.slag], ['Fly Ash', d.flyAsh],
-    ['Silica Fume', d.silicaFume], ['Limestone Filler', d.limestone],
-    ['Water', d.water], ['Superplasticizer', d.superplasticizer],
-    ['Coarse Aggregate', d.coarseAgg], ['Fine Aggregate', d.fineAgg]
-  ];
-  rows.forEach(([k,v]) => { doc.text(`${k}: ${Number(v).toFixed(2)}`, leftColX, y); y += lh; });
+  doc.setFont("helvetica", "bold");
+  doc.text("Material Quantities", leftColX, y);
+  y += lh;
+  doc.setFont("helvetica", "normal");
 
-  // SUBSECTION: Slump
+  if (data.inputMode === "kg") {
+    doc.text("Mode: Ratios", leftColX, y);
+    y += lh;
+    const rows = [
+      ["Cement (kg/m³)", data.cementContent],
+      ["Water (kg/m³)", data.waterContent],
+      ["Fine Aggregate (kg/m³)", data.fineAgg],
+      ["Medium Aggregate (kg/m³)", data.mediumAgg],
+      ["Coarse Aggregate (kg/m³)", data.coarseAgg]
+    ];
+    rows.forEach(([k, v]) => {
+      doc.text(`${k}: ${Number(v).toFixed(2)}`, leftColX, y);
+      y += lh;
+    });
+    doc.text(
+      `Derived Water–Cement Ratio: ${(data.wcRatio ?? 0).toFixed(2)}`,
+      leftColX,
+      y
+    );
+    y += lh;
+    if (data.mixRatioString) {
+      doc.text(
+        `Normalized Mix Ratio (by cement): ${data.mixRatioString}`,
+        leftColX,
+        y
+      );
+      y += lh;
+    }
+  } else {
+    doc.text("Mode: Ratios", leftColX, y);
+    y += lh;
+    doc.text(
+      `Cement : Fine : Medium : Coarse : Water (parts)`,
+      leftColX,
+      y
+    );
+    y += lh;
+    const ratioText = data.mixRatioString || "";
+    if (ratioText) {
+      doc.text(`Normalized Mix Ratio (by cement): ${ratioText}`, leftColX, y);
+      y += lh;
+    } else {
+      doc.text(
+        `Cement (parts): ${data.ratioCement}, Fine: ${data.ratioFine}, Medium: ${data.ratioMedium}, Coarse: ${data.ratioCoarse}, Water: ${data.ratioWater}`,
+        leftColX,
+        y
+      );
+      y += lh;
+    }
+    doc.text(
+      `Derived Water–Cement Ratio (from parts): ${(data.wcRatio ?? 0).toFixed(2)}`,
+      leftColX,
+      y
+    );
+    y += lh;
+  }
+
   y += 4;
-  doc.setFont('helvetica','bold'); doc.text('Slump / Workability', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  doc.text(`Slump (mm): ${Number(d.slump).toFixed(1)}`, leftColX, y); y += lh;
+  doc.setFont("helvetica", "bold");
+  doc.text("Chemical Admixtures", leftColX, y);
+  y += lh;
+  doc.setFont("helvetica", "normal");
 
-  // SUBSECTION: Age & Target & Cubes
+  if (data.admixtures && data.admixtures.length) {
+    data.admixtures.forEach((a, idx) => {
+      doc.text(`Admixture ${idx + 1}:`, leftColX, y);
+      y += lh;
+
+      if (a.name && a.name.trim().length > 0) {
+        doc.text(`Name: ${a.name}`, leftColX + 12, y);
+        y += lh;
+      }
+      if (a.type && a.type.trim().length > 0) {
+        doc.text(`Type: ${a.type}`, leftColX + 12, y);
+        y += lh;
+      }
+      if (a.dosage && a.dosage.trim().length > 0) {
+        doc.text(
+          `Dosage (L/100kg of cement): ${a.dosage}`,
+          leftColX + 12,
+          y
+        );
+        y += lh;
+      }
+
+      y += 4;
+    });
+  } else {
+    doc.text("None specified.", leftColX, y);
+    y += lh;
+  }
+
   y += 4;
-  doc.setFont('helvetica','bold'); doc.text('Age & Target Strength Information', leftColX, y); y += lh;
-  doc.setFont('helvetica','normal');
-  doc.text(`Age (days): ${d.ageDays}`, leftColX, y);
-  doc.text(`Target Strength (MPa): ${Number(d.targetMPa).toFixed(2)}`, rightColX, y); y += lh;
-  doc.text(`Number of cubes to be crushed: ${d.cubesCount}`, leftColX, y); y += lh;
+  doc.setFont("helvetica", "bold");
+  doc.text("Partial Cement Replacements (SCMs)", leftColX, y);
+  y += lh;
+  doc.setFont("helvetica", "normal");
 
-  // SUBSECTION: Derived metric
-  const wc = (d.cement > 0) ? (Number(d.water) / Number(d.cement)) : 0;
-  doc.text(`Derived w/c ratio: ${wc.toFixed(2)}`, leftColX, y); y += lh;
+  if (data.scms && data.scms.length) {
+    data.scms.forEach((r, idx) => {
+      doc.text(`SCM ${idx + 1}:`, leftColX, y);
+      y += lh;
 
-  // SUBSECTION: Notes (wrapped to page width)
-  if (d.notes && d.notes.trim().length > 0) {
+      if (r.name && r.name.trim().length > 0) {
+        doc.text(
+          `SCM Name: ${r.name}`,
+          leftColX + 12,
+          y
+        );
+        y += lh;
+      }
+      if (r.percent && r.percent.trim().length > 0) {
+        doc.text(`Percentage: ${r.percent}%`, leftColX + 12, y);
+        y += lh;
+      }
+      if (r.quantity && r.quantity.trim().length > 0) {
+        doc.text(`Quantity: ${r.quantity} kg/m³`, leftColX + 12, y);
+        y += lh;
+      }
+
+      y += 4;
+    });
+  } else {
+    doc.text("None specified.", leftColX, y);
+    y += lh;
+  }
+
+  if (data.notes && data.notes.trim().length > 0) {
     y += 4;
-    doc.setFont('helvetica','bold'); doc.text('Additional Notes', leftColX, y); y += lh;
-    doc.setFont('helvetica','normal');
-    const wrapped = doc.splitTextToSize(d.notes, 595 - 32*2);
+    doc.setFont("helvetica", "bold");
+    doc.text("General Notes", leftColX, y);
+    y += lh;
+    doc.setFont("helvetica", "normal");
+    const wrapped = doc.splitTextToSize(data.notes, pageW - margin * 2);
     doc.text(wrapped, leftColX, y);
     y += wrapped.length * (lh - 2);
   }
 
-  // SUBSECTION: For Office Use block at bottom
   const boxHeight = 78;
   const boxY = pageH - 32 - boxHeight;
-  doc.setFont('helvetica','bold');
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(10.5);
   doc.setDrawColor(0);
-  doc.rect(32, boxY, 595 - 32*2, boxHeight);
-  doc.text('FOR OFFICE USE ONLY', 40, boxY + 16);
+  doc.rect(32, boxY, pageW - 32 * 2, boxHeight);
+  doc.text("FOR OFFICE USE ONLY", 40, boxY + 16);
 
-  doc.setFont('helvetica','normal');
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
-  const line1 = 'Crushed Compressive Strength (MPa): ______________________________';
-  const line2 = 'Tested on: ____________________';
-  const line3 = 'Remarks: ___________________________________________________________';
+  const line1 =
+    "Recorded Compressive Strength Results: ______________________________";
+  const line2 = "Tested on: ____________________";
+  const line3 =
+    "Remarks: ___________________________________________________________";
   doc.text(line1, 40, boxY + 34);
   doc.text(line2, 40, boxY + 50);
   doc.text(line3, 40, boxY + 66);
 
-  // SUBSECTION: Footer and file save
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('This document was generated electronically by the Concrete Laboratory, University of Lagos.', 297.5, pageH - 10, { align: 'center' });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(
+    "This document was generated electronically by the Concrete Laboratory, University of Lagos.",
+    pageW / 2,
+    pageH - 10,
+    { align: "center" }
+  );
 
-  const client = sanitizeFilename(d.clientName || 'Client');
-  const date = sanitizeFilename(d.crushingDate || new Date().toISOString().slice(0,10));
-  doc.save(`${client}_${date}.pdf`);
+  const student = sanitizeFilename(data.studentName || "Student");
+  const date = sanitizeFilename(
+    data.crushDate || new Date().toISOString().slice(0, 10)
+  );
+  doc.save(`${student}_${date}.pdf`);
 }
+
+/* ------------------------------------------------------------
+   CSV EXPORT AND CLEAR ALL
+------------------------------------------------------------ */
+function exportCsv() {
+  const mixes = getLocalMixes();
+  if (!mixes.length) return;
+
+  const headers = [
+    "RecordType",              // "MIX", "ADM", or "SCM"
+    "ApplicationNumber",
+    "InputMode",
+    "Timestamp",
+    "StudentName",
+    "MatricNo",
+    "Institution",
+    "Supervisor",
+    "ProjectTitle",
+    "CrushingDate",
+    "ConcreteType",
+    "CementType",
+    "Slump_mm",
+    "Age_days",
+    "CubesCount",
+    "Cement_kgm3",
+    "Water_kgm3",
+    "FineAgg_kgm3",
+    "MediumAgg_kgm3",
+    "CoarseAgg_kgm3",
+    "Ratio_Cement",
+    "Ratio_Fine",
+    "Ratio_Medium",
+    "Ratio_Coarse",
+    "Ratio_Water",
+    "WCRatio",
+    "MixRatioString",
+    "Notes",
+    "AdmIndex",
+    "AdmName",
+    "AdmType",
+    "AdmDosage_Lper100kg",
+    "ScmIndex",
+    "ScmName",
+    "ScmPercent",
+    "ScmQuantity_kgm3"
+  ];
+
+  const lines = [headers.join(",")];
+
+  mixes.forEach(m => {
+    const appNo = m.applicationNumber || "";
+    const mode = m.inputMode || "";
+    const ts = m.timestamp || "";
+    const student = m.studentName || "";
+    const matric = m.matricNo || "";
+    const inst = m.institution || "";
+    const sup = m.supervisor || "";
+    const title = m.projectTitle || "";
+    const crushDate = m.crushDate || "";
+    const concType = m.concreteType || "";
+    const cemType = m.cementType || "";
+    const slump = m.slump ?? "";
+    const age = m.ageDays ?? "";
+    const cubes = m.cubesCount ?? "";
+    const cemKg = m.cementContent ?? "";
+    const waterKg = m.waterContent ?? "";
+    const fineKg = m.fineAgg ?? "";
+    const medKg = m.mediumAgg ?? "";
+    const coarseKg = m.coarseAgg ?? "";
+    const rC = m.ratioCement ?? "";
+    const rF = m.ratioFine ?? "";
+    const rM = m.ratioMedium ?? "";
+    const rCo = m.ratioCoarse ?? "";
+    const rW = m.ratioWater ?? "";
+    const wc = m.wcRatio ?? "";
+    const mixString = m.mixRatioString || "";
+    const notes = (m.notes || "").replace(/\r?\n/g, " ");
+
+    // -----------------------
+    // 1) Main MIX row
+    // -----------------------
+    const mixRow = [
+      "MIX",
+      appNo,
+      mode,
+      ts,
+      student,
+      matric,
+      inst,
+      sup,
+      title,
+      crushDate,
+      concType,
+      cemType,
+      slump,
+      age,
+      cubes,
+      cemKg,
+      waterKg,
+      fineKg,
+      medKg,
+      coarseKg,
+      rC,
+      rF,
+      rM,
+      rCo,
+      rW,
+      wc,
+      mixString,
+      notes,
+      "",   // AdmIndex
+      "",   // AdmName
+      "",   // AdmType
+      "",   // AdmDosage_Lper100kg
+      "",   // ScmIndex
+      "",   // ScmName
+      "",   // ScmPercent
+      ""    // ScmQuantity_kgm3
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+
+    lines.push(mixRow.join(","));
+
+    // -----------------------
+    // 2) Admixture rows
+    // -----------------------
+    if (Array.isArray(m.admixtures)) {
+      m.admixtures.forEach((a, idx) => {
+        const admRow = [
+          "ADM",           // RecordType
+          appNo,
+          mode,
+          ts,
+          student,
+          "",              // MatricNo (can leave blank here)
+          "",              // Institution
+          "",              // Supervisor
+          "",              // ProjectTitle
+          "",              // CrushingDate
+          "",              // ConcreteType
+          "",              // CementType
+          "",              // Slump_mm
+          "",              // Age_days
+          "",              // CubesCount
+          "", "", "", "",  // kg/m3 fields
+          "", "", "", "", "", // ratio fields
+          "",              // WCRatio
+          "",              // MixRatioString
+          "",              // Notes
+          idx + 1,         // AdmIndex (1-based)
+          a.name || "",
+          a.type || "",
+          a.dosage || "",
+          "",              // ScmIndex
+          "",              // ScmName
+          "",              // ScmPercent
+          ""               // ScmQuantity_kgm3
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+
+        lines.push(admRow.join(","));
+      });
+    }
+
+    // -----------------------
+    // 3) SCM rows
+    // -----------------------
+    if (Array.isArray(m.scms)) {
+      m.scms.forEach((s, idx) => {
+        const scmRow = [
+          "SCM",           // RecordType
+          appNo,
+          mode,
+          ts,
+          student,
+          "",              // MatricNo
+          "",              // Institution
+          "",              // Supervisor
+          "",              // ProjectTitle
+          "",              // CrushingDate
+          "",              // ConcreteType
+          "",              // CementType
+          "",              // Slump_mm
+          "",              // Age_days
+          "",              // CubesCount
+          "", "", "", "",  // kg/m3 fields
+          "", "", "", "", "", // ratio fields
+          "",              // WCRatio
+          "",              // MixRatioString
+          "",              // Notes
+          "",              // AdmIndex
+          "",              // AdmName
+          "",              // AdmType
+          "",              // AdmDosage_Lper100kg
+          idx + 1,         // ScmIndex (1-based)
+          s.name || "",
+          s.percent || "",
+          s.quantity || ""
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+
+        lines.push(scmRow.join(","));
+      });
+    }
+  });
+
+  const blob = new Blob([lines.join("\r\n")], {
+    type: "text/csv;charset=utf-8;"
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "unilag_research_mixes_full.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function clearAllMixes() {
+  saveLocalMixes([]);
+  renderSavedMixes();
+  setStatusLine("All local mixes cleared.", "info");
+}
+
+/* ------------------------------------------------------------
+   APPLICATION NUMBER MODAL
+------------------------------------------------------------ */
+function openModal(appNo) {
+  const modal = document.getElementById("appModal");
+  const modalNumber = document.getElementById("modalNumber");
+  if (!modal || !modalNumber) return;
+  modalNumber.textContent = appNo;
+  setTimeout(() => modal.classList.remove("hidden"), 80);
+}
+
+function closeModal() {
+  const modal = document.getElementById("appModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+/* ------------------------------------------------------------
+   FORM SUBMISSION
+------------------------------------------------------------ */
+async function submitForm(event) {
+  event.preventDefault();
+
+  if (!validateForm()) return;
+
+  const data = collectFormData();
+  setStatusLine("Saving to server...", "info");
+
+  let response;
+  try {
+    response = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  } catch {
+    setStatusLine(
+      "Network error. Please check your connection and try again.",
+      "error"
+    );
+    return;
+  }
+
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    setStatusLine("Unexpected server response. Please try again.", "error");
+    return;
+  }
+
+  if (!result.success) {
+    setStatusLine("Failed to save to Google Sheets. Please try again.", "error");
+    return;
+  }
+
+  data.applicationNumber = result.recordId;
+  data.timestamp = new Date().toLocaleString();
+  if (typeof result.wcRatio === "number") {
+    data.wcRatio = result.wcRatio;
+  }
+  if (typeof result.mixRatioString === "string" && result.mixRatioString) {
+    data.mixRatioString = result.mixRatioString;
+  }
+
+  saveLocal(data);
+  renderSavedMixes();
+
+  if (!logoImageDataUrl) {
+    logoImageDataUrl = await loadImageAsDataURL("unilag-logo.png");
+  }
+  await generatePDF(data);
+
+  openModal(data.applicationNumber);
+  setStatusLine(
+    `Saved successfully. Application Number: ${data.applicationNumber}`,
+    "success"
+  );
+}
+
+/* ------------------------------------------------------------
+   PAGE INITIALISATION
+------------------------------------------------------------ */
+document.addEventListener("DOMContentLoaded", () => {
+  const crushDateEl = document.getElementById("crushDate");
+  setDateToToday(crushDateEl);
+
+  loadImageAsDataURL("unilag-logo.png").then(d => {
+    logoImageDataUrl = d;
+  });
+
+  document
+    .getElementById("admixtures-container")
+    .appendChild(createAdmixtureRow());
+  document
+    .getElementById("scms-container")
+    .appendChild(createScmRow());
+
+  document.getElementById("concreteType").onchange = function () {
+    const wrapper = document.getElementById("concreteTypeOtherWrapper");
+    if (this.value === "Other") {
+      wrapper.style.display = "block";
+    } else {
+      wrapper.style.display = "none";
+      document.getElementById("concreteTypeOther").value = "";
+    }
+  };
+
+  document.getElementById("cementType").onchange = function () {
+    const wrapper = document.getElementById("cementTypeOtherWrapper");
+    if (this.value === "Other") {
+      wrapper.style.display = "block";
+    } else {
+      wrapper.style.display = "none";
+      document.getElementById("cementTypeOther").value = "";
+    }
+  };
+
+  document.getElementById("cementContent").oninput = () => {
+    updateWCRatio();
+    updateMixRatio();
+  };
+  document.getElementById("waterContent").oninput = () => {
+    updateWCRatio();
+    updateMixRatio();
+  };
+  document.getElementById("fineAgg").oninput = updateMixRatio;
+  document.getElementById("mediumAgg").oninput = updateMixRatio;
+  document.getElementById("coarseAgg").oninput = updateMixRatio;
+
+  document.getElementById("mix-form").onsubmit = submitForm;
+
+  document.getElementById("add-admixture-btn").onclick = () =>
+    document
+      .getElementById("admixtures-container")
+      .appendChild(createAdmixtureRow());
+
+  document.getElementById("add-scm-btn").onclick = () =>
+    document
+      .getElementById("scms-container")
+      .appendChild(createScmRow());
+
+  const modeKg = document.getElementById("modeKg");
+  const modeRatio = document.getElementById("modeRatio");
+
+  modeKg.onchange = () => applyInputModeToUI("kg");
+  modeRatio.onchange = () => applyInputModeToUI("ratio");
+
+  document.getElementById("reset-form-btn").onclick = () => {
+    document.getElementById("mix-form").reset();
+    setDateToToday(crushDateEl);
+
+    document.getElementById("admixtures-container").innerHTML = "";
+    document.getElementById("scms-container").innerHTML = "";
+    document
+      .getElementById("admixtures-container")
+      .appendChild(createAdmixtureRow());
+    document
+      .getElementById("scms-container")
+      .appendChild(createScmRow());
+
+    applyInputModeToUI("kg");
+    updateWCRatio();
+    updateMixRatio();
+    document.getElementById("form-error-summary").style.display = "none";
+    setStatusLine("", "info");
+  };
+
+  document.getElementById("export-csv-btn").onclick = exportCsv;
+  document.getElementById("clear-all-btn").onclick = clearAllMixes;
+
+  document.getElementById("mixes-table-body").onclick = e => {
+    const row = e.target.closest("tr");
+    if (!row || row.classList.contains("no-data")) return;
+    const idx = row.dataset.index;
+    if (idx == null) return;
+    const mixes = getLocalMixes();
+    const mix = mixes[Number(idx)];
+    if (mix) {
+      loadMixIntoForm(mix);
+    }
+  };
+
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("appModal").addEventListener("click", e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  applyInputModeToUI("kg");
+  renderSavedMixes();
+  document.getElementById("year").textContent = new Date().getFullYear();
+});
