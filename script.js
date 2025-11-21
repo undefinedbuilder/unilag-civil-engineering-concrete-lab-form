@@ -66,12 +66,16 @@ function createAdmixtureRow(data = {}) {
 
   row.innerHTML = `
     <label>
-      <span class="label-line">Admixture Name *</span>
+      <span class="label-line">
+        Admixture Name <span class="required-asterisk">*</span>
+      </span>
       <input type="text" name="adm_name" value="${data.name || ""}">
     </label>
 
     <label>
-      <span class="label-line">Dosage (L/100kg of Cement) *</span>
+      <span class="label-line">
+        Dosage (L/100kg of Cement) <span class="required-asterisk">*</span>
+      </span>
       <input type="text" name="adm_dosage" value="${data.dosage || ""}">
     </label>
 
@@ -88,12 +92,16 @@ function createScmRow(data = {}) {
 
   row.innerHTML = `
     <label>
-      <span class="label-line">SCM Name *</span>
+      <span class="label-line">
+        SCM Name <span class="required-asterisk">*</span>
+      </span>
       <input type="text" name="scm_name" value="${data.name || ""}">
     </label>
 
     <label>
-      <span class="label-line">Percent (%) *</span>
+      <span class="label-line">
+        Percent (%) <span class="required-asterisk">*</span>
+      </span>
       <input type="text" name="scm_percent" value="${data.percent || ""}">
     </label>
 
@@ -104,43 +112,78 @@ function createScmRow(data = {}) {
   return row;
 }
 
-/* ---------- W/C Ratio + Mix Ratio (kg mode) ---------- */
+/* ---------- W/C Ratio + Mix Ratio ---------- */
+// Show/hide the W/C + Mix ratio boxes
+function toggleRatioBoxes(show) {
+  const wcBox = document.getElementById("wcratio-box");
+  const mixBox = document.getElementById("mixratio-box");
+
+  if (!wcBox || !mixBox) return;
+
+  wcBox.style.display = show ? "" : "none";
+  mixBox.style.display = show ? "" : "none";
+}
 
 function updateWCRatioFromKg() {
   const cement = parseFloat(document.getElementById("cementContent").value);
   const water = parseFloat(document.getElementById("waterContent").value);
+  const fine = parseFloat(document.getElementById("fineAgg").value);
+  const medium = parseFloat(document.getElementById("mediumAgg").value);
+  const coarse = parseFloat(document.getElementById("coarseAgg").value);
 
-  let ratio = 0;
-  if (!isNaN(cement) && cement > 0 && !isNaN(water)) {
-    ratio = water / cement;
+  // If ANY are missing → hide boxes
+  if ([cement, water, fine, medium, coarse].some(v => isNaN(v) || v === "")) {
+    toggleRatioBoxes(false);
+    return 0;
   }
 
-  const span = document.getElementById("wcRatioValue");
-  if (span) span.textContent = ratio.toFixed(2);
+  // All filled → compute + show boxes
+  const ratio = water / cement;
+  document.getElementById("wcRatioValue").textContent = ratio.toFixed(2);
+  toggleRatioBoxes(true);
 
   return ratio;
 }
 
 function updateMixRatioFromKg() {
-  const c = parseFloat(document.getElementById("cementContent").value);
-  const f = parseFloat(document.getElementById("fineAgg").value);
-  const m = parseFloat(document.getElementById("mediumAgg").value);
-  const co = parseFloat(document.getElementById("coarseAgg").value);
-  const w = parseFloat(document.getElementById("waterContent").value);
+  const cement = parseFloat(document.getElementById("cementContent").value);
+  const fine = parseFloat(document.getElementById("fineAgg").value);
+  const medium = parseFloat(document.getElementById("mediumAgg").value);
+  const coarse = parseFloat(document.getElementById("coarseAgg").value);
+  const water = parseFloat(document.getElementById("waterContent").value);
 
-  const span = document.getElementById("mixRatioValue");
-
-  if (isNaN(c) || c <= 0 || [f, m, co, w].some((n) => isNaN(n))) {
-    if (span) span.textContent = "–";
+  if ([cement, fine, medium, coarse, water].some(v => isNaN(v) || v === "")) {
+    toggleRatioBoxes(false);
     return "";
   }
 
-  const text = `1 : ${(f / c).toFixed(2)} : ${(m / c).toFixed(2)} : ${(co / c).toFixed(
-    2
-  )} : ${(w / c).toFixed(2)}`;
+  const mix = `1 : ${(fine / cement).toFixed(2)} : ${(medium / cement).toFixed(2)} : ${(coarse / cement).toFixed(2)} : ${(water / cement).toFixed(2)}`;
+  document.getElementById("mixRatioValue").textContent = mix;
+  toggleRatioBoxes(true);
+  return mix;
+}
 
-  if (span) span.textContent = text;
-  return text;
+function updateWcAndMixFromRatio() {
+  const c = parseFloat(document.getElementById("ratioCement").value);
+  const f = parseFloat(document.getElementById("ratioFine").value);
+  const m = parseFloat(document.getElementById("ratioMedium").value);
+  const co = parseFloat(document.getElementById("ratioCoarse").value);
+  const w = parseFloat(document.getElementById("ratioWater").value);
+
+  if ([c, f, m, co, w].some(v => isNaN(v) || v === "")) {
+    toggleRatioBoxes(false);
+    return { wcRatio: 0, mixRatioString: "" };
+  }
+
+  const wc = w / c;
+  const mix = `1 : ${(f / c).toFixed(2)} : ${(m / c).toFixed(2)} : ${(co / c).toFixed(2)} : ${(w / c).toFixed(2)}`;
+
+  document.getElementById("wcRatioValue").textContent = wc.toFixed(2);
+  document.getElementById("mixRatioValue").textContent = mix;
+
+  toggleRatioBoxes(true);
+
+  return { wcRatio: wc, mixRatioString: mix };
 }
 
 /* ---------- Input Mode UI ---------- */
@@ -187,12 +230,12 @@ function validateForm() {
   const mode = getInputMode();
 
   const commonRequired = [
-    "studentName",
+    "clientName",
     "contactEmail",
-    "institution",
-    "supervisor",
-    "matricNo",
-    "projectTitle",
+    "organisationType",
+    "contactPerson",
+    "phoneNumber",
+    "projectSite",
     "crushDate",
     "concreteType",
     "cementType",
@@ -238,6 +281,42 @@ function validateForm() {
     kgRequired.forEach(checkId);
   } else {
     ratioRequired.forEach(checkId);
+  }
+
+    // If user has added any admixture rows, both fields in each row are required
+  const admRows = document.querySelectorAll("#admixtures-container .dynamic-row");
+  if (admRows.length > 0) {
+    admRows.forEach((row) => {
+      const nameInput = row.querySelector('input[name="adm_name"]');
+      const dosageInput = row.querySelector('input[name="adm_dosage"]');
+      const nameEmpty = !nameInput || !nameInput.value.trim();
+      const dosageEmpty = !dosageInput || !dosageInput.value.trim();
+
+      if (nameEmpty || dosageEmpty) {
+        if (nameEmpty && nameInput) nameInput.classList.add("error");
+        if (dosageEmpty && dosageInput) dosageInput.classList.add("error");
+        missing.push("admixtures");
+        if (!firstBad) firstBad = nameInput || dosageInput;
+      }
+    });
+  }
+
+  // If user has added any SCM rows, both fields in each row are required
+  const scmRows = document.querySelectorAll("#scms-container .dynamic-row");
+  if (scmRows.length > 0) {
+    scmRows.forEach((row) => {
+      const nameInput = row.querySelector('input[name="scm_name"]');
+      const percentInput = row.querySelector('input[name="scm_percent"]');
+      const nameEmpty = !nameInput || !nameInput.value.trim();
+      const percentEmpty = !percentInput || !percentInput.value.trim();
+
+      if (nameEmpty || percentEmpty) {
+        if (nameEmpty && nameInput) nameInput.classList.add("error");
+        if (percentEmpty && percentInput) percentInput.classList.add("error");
+        missing.push("scms");
+        if (!firstBad) firstBad = nameInput || percentInput;
+      }
+    });
   }
 
   const errorSummary = document.getElementById("form-error-summary");
@@ -308,40 +387,28 @@ function collectFormData() {
   const ratioCoarse = Number(document.getElementById("ratioCoarse").value || 0);
   const ratioWater = Number(document.getElementById("ratioWater").value || 0);
 
-  // Compute W/C + mix ratio (front-end)
+  // Compute W/C + mix ratio
   let wcRatio = 0;
   let mixRatioString = "";
 
-  if (mode === "kg") {
+    if (mode === "kg") {
     wcRatio = updateWCRatioFromKg();
     mixRatioString = updateMixRatioFromKg();
   } else {
-    if (ratioCement > 0 && !isNaN(ratioWater)) {
-      wcRatio = ratioWater / ratioCement;
-    }
-    if (
-      ratioCement > 0 &&
-      ![ratioFine, ratioMedium, ratioCoarse, ratioWater].some((v) => isNaN(v))
-    ) {
-      const f = ratioFine / ratioCement;
-      const m = ratioMedium / ratioCement;
-      const co = ratioCoarse / ratioCement;
-      const w = ratioWater / ratioCement;
-      mixRatioString = `1 : ${f.toFixed(2)} : ${m.toFixed(2)} : ${co.toFixed(2)} : ${w.toFixed(
-        2
-      )}`;
-    }
+    const result = updateWcAndMixFromRatio();
+    wcRatio = result.wcRatio;
+    mixRatioString = result.mixRatioString;
   }
 
-  // Main payload (matches backend submit.js)
+  // Main payload
   const data = {
     inputMode: mode,
-    studentName: document.getElementById("studentName").value.trim(),
+    clientName: document.getElementById("clientName").value.trim(),
     contactEmail: document.getElementById("contactEmail").value.trim(),
-    institution: document.getElementById("institution").value.trim(),
-    supervisor: document.getElementById("supervisor").value.trim(),
-    matricNo: document.getElementById("matricNo").value.trim(),
-    projectTitle: document.getElementById("projectTitle").value.trim(),
+    organisationType: document.getElementById("organisationType").value.trim(),
+    contactPerson: document.getElementById("contactPerson").value.trim(),
+    phoneNumber: document.getElementById("phoneNumber").value.trim(),
+    projectSite: document.getElementById("projectSite").value.trim(),
     crushDate: document.getElementById("crushDate").value,
     concreteType,
     cementType,
@@ -421,7 +488,7 @@ function renderSavedRecords() {
     tr.innerHTML = `
       <td>${r.recordId || "—"}</td>
       <td>${r.inputMode === "ratio" ? "Ratio" : "Kg/m³"}</td>
-      <td>${r.studentName || ""}</td>
+      <td>${r.clientName || ""}</td>
       <td>${r.concreteType || ""}</td>
       <td>${wcText}</td>
       <td>${when}</td>
@@ -434,12 +501,12 @@ function renderSavedRecords() {
 /* ---------- Load Record Back Into Form ---------- */
 
 function loadRecordIntoForm(r) {
-  document.getElementById("studentName").value = r.studentName || "";
+  document.getElementById("clientName").value = r.clientName || "";
   document.getElementById("contactEmail").value = r.contactEmail || "";
-  document.getElementById("institution").value = r.institution || "";
-  document.getElementById("supervisor").value = r.supervisor || "";
-  document.getElementById("matricNo").value = r.matricNo || "";
-  document.getElementById("projectTitle").value = r.projectTitle || "";
+  document.getElementById("organisationType").value = r.organisationType || "";
+  document.getElementById("contactPerson").value = r.contactPerson || "";
+  document.getElementById("phoneNumber").value = r.phoneNumber || "";
+  document.getElementById("projectSite").value = r.projectSite || "";
   document.getElementById("crushDate").value = r.crushDate || "";
   document.getElementById("slump").value = r.slump ?? "";
   document.getElementById("ageDays").value = r.ageDays ?? "";
@@ -447,9 +514,61 @@ function loadRecordIntoForm(r) {
   document.getElementById("targetStrength").value = r.targetStrength ?? "";
   document.getElementById("notes").value = r.notes || "";
 
-  // For this load, we just set main strings
-  document.getElementById("concreteType").value = "";
-  document.getElementById("cementType").value = "";
+  // Restore Concrete Type
+  const concreteSelect = document.getElementById("concreteType");
+  const concreteOther = document.getElementById("concreteTypeOther");
+  if (concreteSelect) {
+    const saved = r.concreteType || "";
+    let matched = false;
+
+    for (const opt of concreteSelect.options) {
+      if (opt.value === saved || opt.text === saved) {
+        concreteSelect.value = opt.value;
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      if (saved) {
+        concreteSelect.value = "Other";
+        if (concreteOther) concreteOther.value = saved;
+      } else {
+        concreteSelect.value = "";
+        if (concreteOther) concreteOther.value = "";
+      }
+    } else if (concreteOther) {
+      concreteOther.value = "";
+    }
+  }
+
+  // Restore Cement Type
+  const cementSelect = document.getElementById("cementType");
+  const cementOther = document.getElementById("cementTypeOther");
+  if (cementSelect) {
+    const saved = r.cementType || "";
+    let matched = false;
+
+    for (const opt of cementSelect.options) {
+      if (opt.value === saved || opt.text === saved) {
+        cementSelect.value = opt.value;
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      if (saved) {
+        cementSelect.value = "Other";
+        if (cementOther) cementOther.value = saved;
+      } else {
+        cementSelect.value = "";
+        if (cementOther) cementOther.value = "";
+      }
+    } else if (cementOther) {
+      cementOther.value = "";
+    }
+  }
 
   // Mix / mode
   const mode = r.inputMode === "ratio" ? "ratio" : "kg";
@@ -469,9 +588,6 @@ function loadRecordIntoForm(r) {
   document.getElementById("mediumAgg").value = r.mediumAgg ?? "";
   document.getElementById("coarseAgg").value = r.coarseAgg ?? "";
 
-  updateWCRatioFromKg();
-  updateMixRatioFromKg();
-
   // Ratio inputs
   document.getElementById("ratioCement").value = r.ratioCement ?? "1";
   document.getElementById("ratioFine").value = r.ratioFine ?? "";
@@ -479,13 +595,19 @@ function loadRecordIntoForm(r) {
   document.getElementById("ratioCoarse").value = r.ratioCoarse ?? "";
   document.getElementById("ratioWater").value = r.ratioWater ?? "";
 
+  // Update W/C + mix according to current mode
+  if (mode === "kg") {
+    updateWCRatioFromKg();
+    updateMixRatioFromKg();
+  } else {
+    updateWcAndMixFromRatio();
+  }
+
   // Admixtures
   const admContainer = document.getElementById("admixtures-container");
   admContainer.innerHTML = "";
   if (Array.isArray(r.admixtures) && r.admixtures.length) {
     r.admixtures.forEach((a) => admContainer.appendChild(createAdmixtureRow(a)));
-  } else {
-    admContainer.appendChild(createAdmixtureRow());
   }
 
   // SCMs
@@ -493,9 +615,11 @@ function loadRecordIntoForm(r) {
   scmContainer.innerHTML = "";
   if (Array.isArray(r.scms) && r.scms.length) {
     r.scms.forEach((s) => scmContainer.appendChild(createScmRow(s)));
-  } else {
-    scmContainer.appendChild(createScmRow());
   }
+
+  // “Other” visibility
+  syncConcreteTypeOther();
+  syncCementTypeOther();
 
   setStatusLine("Saved record loaded into form.", "info");
 }
@@ -532,17 +656,17 @@ async function generatePDF(data) {
   doc.text("Client Details", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
-  doc.text(`Client Name: ${data.studentName}`, margin, y);
+  doc.text(`Client Name: ${data.clientName}`, margin, y);
   y += 14;
   doc.text(`Contact Email: ${data.contactEmail}`, margin, y);
   y += 14;
-  doc.text(`Contact Phone: ${data.matricNo}`, margin, y);
+  doc.text(`Contact Phone: ${data.phoneNumber}`, margin, y);
   y += 14;
-  doc.text(`Organisation / Institution: ${data.institution}`, margin, y);
+  doc.text(`Organisation Type: ${data.organisationType}`, margin, y);
   y += 14;
-  doc.text(`Contact Person: ${data.supervisor}`, margin, y);
+  doc.text(`Contact Person: ${data.contactPerson}`, margin, y);
   y += 14;
-  doc.text(`Project / Site: ${data.projectTitle}`, margin, y);
+  doc.text(`Project / Site: ${data.projectSite}`, margin, y);
   y += 20;
 
   doc.setFont("helvetica", "bold");
@@ -654,8 +778,8 @@ async function generatePDF(data) {
   doc.text(notesLines, margin, y);
 
   const filename = `${sanitizeFilename(
-    data.studentName || "Client"
-  )}_${sanitizeFilename(data.projectTitle || "CubeTest")}.pdf`;
+    data.clientName || "Client"
+  )}_${sanitizeFilename(data.projectSite || "CubeTest")}.pdf`;
   doc.save(filename);
 }
 
@@ -671,7 +795,7 @@ function exportCsv() {
     "ClientName",
     "Email",
     "Phone",
-    "Institution",
+    "organisationType",
     "ContactPerson",
     "ProjectSite",
     "CrushDate",
@@ -703,12 +827,12 @@ function exportCsv() {
     const row = [
       r.recordId || "",
       r.inputMode || "",
-      r.studentName || "",
+      r.clientName || "",
       r.contactEmail || "",
-      r.matricNo || "",
-      r.institution || "",
-      r.supervisor || "",
-      r.projectTitle || "",
+      r.phoneNumber || "",
+      r.organisationType || "",
+      r.contactPerson || "",
+      r.projectSite || "",
       r.crushDate || "",
       r.concreteType || "",
       r.cementType || "",
@@ -846,14 +970,12 @@ function resetFormFields() {
   syncConcreteTypeOther();
   syncCementTypeOther();
 
-  // Reset dynamic rows
+  // Reset dynamic rows (containers empty – user must click "Add")
   const admContainer = document.getElementById("admixtures-container");
   admContainer.innerHTML = "";
-  admContainer.appendChild(createAdmixtureRow());
 
   const scmContainer = document.getElementById("scms-container");
   scmContainer.innerHTML = "";
-  scmContainer.appendChild(createScmRow());
 
   setStatusLine("", "info");
 }
@@ -887,12 +1009,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load logo early
   loadImageAsDataURL("unilag-logo.png").then((d) => (logoImageDataUrl = d));
-
-  // Dynamic rows initial
-  document
-    .getElementById("admixtures-container")
-    .appendChild(createAdmixtureRow());
-  document.getElementById("scms-container").appendChild(createScmRow());
 
   // Add-row buttons
   document.getElementById("add-admixture-btn").onclick = () =>
@@ -930,6 +1046,23 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fineAgg").addEventListener("input", updateMixRatioFromKg);
   document.getElementById("mediumAgg").addEventListener("input", updateMixRatioFromKg);
   document.getElementById("coarseAgg").addEventListener("input", updateMixRatioFromKg);
+
+   // Ratio fields updates
+  document
+    .getElementById("ratioCement")
+    .addEventListener("input", updateWcAndMixFromRatio);
+  document
+    .getElementById("ratioFine")
+    .addEventListener("input", updateWcAndMixFromRatio);
+  document
+    .getElementById("ratioMedium")
+    .addEventListener("input", updateWcAndMixFromRatio);
+  document
+    .getElementById("ratioCoarse")
+    .addEventListener("input", updateWcAndMixFromRatio);
+  document
+    .getElementById("ratioWater")
+    .addEventListener("input", updateWcAndMixFromRatio);
 
   // Submit
   document.getElementById("mix-form").addEventListener("submit", submitForm);

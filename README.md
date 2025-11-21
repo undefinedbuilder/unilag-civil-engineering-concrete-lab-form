@@ -1,80 +1,98 @@
-# UNILAG Concrete Lab – Mix Intake & PDF Report System
+# UNILAG Concrete Laboratory – External Client Cube Test System
+
+This project provides a complete **end-to-end intake system** for external client concrete cube tests at the University of Lagos. It includes a responsive web form, automatic validation, Google Sheets integration, and a one-page PDF report generator.
 
 ---
 
-## What the System Does (End‑to‑End)
+## What the System Does (Simple Overview)
 
-1. **User fills the web form** (`index.html`) and clicks **Submit**.
-2. **Styling** (`style.css`) keeps the UI clear, responsive, and accessible.
+1. **User fills the form** and clicks **Submit**.  
+   (Form structure and UI: `index.html`)
+
+2. **Styling** keeps the interface clean, responsive, and UNILAG-branded.  
+   (Theme and layout: `style.css`)
+
 3. **Client script** (`script.js`):
-   - Validates that all fields are filled (numerics can be `0` where not applicable).
-   - Sends the payload to the server endpoint (`/api/submit`).
-   - If the server saves successfully, receives an **Application Number**.
-   - Generates a **one‑page PDF** with the logo, all data, and an “Office Use Only” box.
-   - Shows a **modal** with the assigned **Application Number**.
-4. **Server function** (`/api/submit` in `submit.js`):
-   - Checks that the request is **POST** and all required fields are present.
-   - Reads the **last used Application Number** from **column C** of the Google Sheet.
-   - Computes the **next ID** in the format `UNILAG-CL-[A-Z][6 digits]` (rolls over digits and letters A→Z→A).
-   - Appends the full row to the sheet (timestamps, mix, derived w/c).
-   - Returns `{ success: true, applicationNumber }` to the browser.
-5. **Dependencies** (`package.json`) declares `googleapis` for server-side Sheets access.
+   - Validates all required fields.
+   - Supports **kg/m³** or **ratio** input modes.
+   - Computes **Water–Cement Ratio** and **Normalized Mix Ratio**.
+   - Sends data to the server endpoint `/api/submit`.
+   - Receives a unique **Application Number**.
+   - Generates a **one-page PDF** with the UNILAG logo and all submitted data.  
+     (Front-end logic: `script.js`)
 
----
----
+4. **Server function** (`submit.js`):
+   - Accepts only `POST` requests.
+   - Validates payload fields.
+   - Retrieves the **last issued Application Number**.
+   - Generates the next ID in the format:  
+     **`UNILAG-CL-K######`** (kg mode) or  
+     **`UNILAG-CL-R######`** (ratio mode)
+   - Computes server-side W/C and mix ratios.
+   - Appends the new row to the correct Google Sheet tab.
+   - Returns `{ success: true, applicationNumber }`.  
+     (API handler: `submit.js`)
 
-## Environment & Deployment
-
-- **Required env vars** (set in Environment Variables):
-  - `GOOGLE_SERVICE_CREDENTIALS` – the **entire** service account JSON (stringified).
-  - `SHEET_ID` – the Google Spreadsheet ID (the long ID in the Sheet URL).
-
-- ## Google Sheets setup
-
-  Create a Google Sheet and note its ID. Use a sheet named **Sheet1** with headers (row 1). Suggested columns (A→Z) to match the saved row order:
-
-  1. **Timestamp (server)**
-  2. **Crushing Date**
-  3. **Application Number**
-  4. **Client**
-  5. **Project**
-  6. **Email**
-  7. **Phone**
-  8. **Cement Brand**
-  9. **Manufacturer's Cement Type**
-  10. **Cement Type**
-  11. **SP Name**
-  12. **Cement**
-  13. **Slag**
-  14. **Fly Ash**
-  15. **Silica Fume**
-  16. **Limestone Filler**
-  17. **Water**
-  18. **Superplasticizer**
-  19. **Coarse Agg**
-  20. **Fine Agg**
-  21. **Derived w/c**
-  22. **Slump (mm)**
-  23. **Age (days)**
-  24. **Target (MPa)**
-  25. **Cubes Count**
-  26. **Notes**
-
-> The API writes to `Sheet1!A:Z`. Ensure the sheet name and range match or adjust in `submit.js`.
+5. **Dependencies** (`package.json`)  
+   - Uses the Google Sheets API via `googleapis`.  
+     (Dependencies: `package.json`)
 
 ---
 
+## Environment Setup
+
+Set these environment variables in your hosting platform:
+
+- **`GOOGLE_SERVICE_CREDENTIALS`**  
+  The full service account JSON, stringified.
+
+- **`SHEET_ID`**  
+  The ID of your Google Spreadsheet.
+
+If either is missing, the server returns a configuration error.
+
 ---
 
-## Notes on Validation & Safety
+## Google Sheets Requirements
 
-- The client blocks submit until **all fields** are valid; numeric fields allow `0`.
-- On any server error, the UI insists on **Retry Save** and does **not** generate a PDF or display an Application Number.
-- Application Numbers are **server-assigned** and monotonically increase with rollover from `A999999` → `B000001`, through `Z999999` → `A000001`.
+Create a Google Sheet and share it with the service account.
+
+The system uses two tabs:
+
+- **Client Sheet (Kg/m3)** – for kg/m³ submissions  
+- **Client Sheet (Ratios)** – for ratio-based submissions  
+
+Each row stored includes:
+
+- Timestamp  
+- Client & contact info  
+- Project/site details  
+- Cube testing parameters  
+- Raw mix values + derived W/C ratio  
+- Normalized mix ratio string  
+- Notes
+
+Admixtures and SCMs are appended to their respective sheets when present.
+
+---
+
+## Validation & Safety
+
+- The frontend blocks submission until **all required fields** are filled.  
+  (Validation: `script.js`)
+
+- The server re-validates before saving.  
+  (Backend validation: `submit.js`)
+
+- If saving fails, **no PDF is generated** and the user must retry.
+
+- Application numbers always increase and rollover safely (e.g., `K999999 → K000001`).  
+  (ID generator: `submit.js` → `nextRecordId()`)
 
 ---
 
 ## Credits
-- 
-- University of Lagos – Department of Civil & Environmental Engineering, Concrete Laboratory.
-- jsPDF for client‑side PDF generation.
+- **Jesuto Ilugbo** – Project Lead & App Developer 
+- **University of Lagos** – Department of Civil & Environmental Engineering  
+- **jsPDF** for client-side PDF generation  
+- **Google Sheets API** for cloud data storage

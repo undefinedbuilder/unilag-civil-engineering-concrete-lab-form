@@ -133,7 +133,7 @@ body {
 .notice {
   flex-basis: 100%;
   margin: 4px 0 0;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   background: rgba(248, 250, 252, 0.14);
   padding: 6px 10px;
   border-radius: 999px;
@@ -328,6 +328,10 @@ input[type="radio"] {
   background: #fecaca;
 }
 
+.dynamic-row .required-asterisk {
+  color: #b91c1c;
+}
+
 /* ==============================
    BUTTONS
    ============================== */
@@ -369,7 +373,7 @@ button {
 
 .btn-submit {
   background: linear-gradient(120deg, var(--accent-gold) 0%, var(--unilag-green) 100%);
-  color: #111827;
+  color: #ffffff;
   font-weight: 600;
   padding-inline: 18px;
 }

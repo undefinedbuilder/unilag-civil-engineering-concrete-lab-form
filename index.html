@@ -36,8 +36,6 @@
       <section class="card">
         <h3>External Client Cube Test Form</h3>
 
-        <div id="form-error-summary" class="error-summary"></div>
-
         <form id="mix-form">
           <!-- CLIENT AND PROJECT DETAILS -->
           <h4 class="section-title">Client &amp; Project Details</h4>
@@ -47,8 +45,7 @@
               <span class="label-line">
                 Company / Client Name <span class="required-asterisk">*</span>
               </span>
-              <!-- Mapped to studentName for backend compatibility -->
-              <input type="text" id="studentName" />
+              <input type="text" id="clientName" />
             </label>
 
             <label>
@@ -60,11 +57,11 @@
 
             <label>
               <span class="label-line">
-                Organisation Type / Institution <span class="required-asterisk">*</span>
+                Organisation Type <span class="required-asterisk">*</span>
               </span>
               <input
                 type="text"
-                id="institution"
+                id="organisationType"
                 placeholder="e.g., Construction Company, Consulting Firm"
               />
             </label>
@@ -73,25 +70,23 @@
               <span class="label-line">
                 Contact Person <span class="required-asterisk">*</span>
               </span>
-              <input type="text" id="supervisor" />
+              <input type="text" id="contactPerson" />
             </label>
 
             <label>
               <span class="label-line">
                 Contact Phone Number <span class="required-asterisk">*</span>
               </span>
-              <!-- mapped as matricNo in backend -->
-              <input type="tel" id="matricNo" />
+              <input type="tel" id="phoneNumber" />
             </label>
 
             <label>
               <span class="label-line">
                 Project / Site <span class="required-asterisk">*</span>
               </span>
-              <!-- projectTitle used in backend -->
               <input
                 type="text"
-                id="projectTitle"
+                id="projectSite"
                 placeholder="e.g., Lekki Phase 1"
               />
             </label>
@@ -250,16 +245,6 @@
                 <input type="number" min="0" step="0.1" id="coarseAgg" />
               </label>
             </div>
-
-            <div id="wcratio-box" class="wc-box">
-              <strong>Water–Cement Ratio (from kg/m³):</strong>
-              <span id="wcRatioValue">0.00</span>
-            </div>
-
-            <div id="mixratio-box" class="wc-box">
-              <strong>Normalized Mix Ratio (by cement, from kg/m³):</strong>
-              <span id="mixRatioValue">–</span>
-            </div>
           </div>
 
           <!-- MATERIAL QUANTITIES (RATIOS) -->
@@ -304,9 +289,19 @@
             </div>
           </div>
 
+          <!-- W/C & MIX RATIO -->
+          <div id="wcratio-box" class="wc-box" style="display:none;">
+              <strong>Water–Cement Ratio (from kg/m³):</strong>
+              <span id="wcRatioValue">0.00</span>
+          </div>
+
+          <div id="mixratio-box" class="wc-box" style="display:none;">
+              <strong>Normalized Mix Ratio (by cement, from kg/m³):</strong>
+              <span id="mixRatioValue">–</span>
+          </div>
+
           <!-- CHEMICAL ADMIXTURES -->
           <h4 class="section-title">Chemical Admixtures</h4>
-          <p class="subtle">If none, you may enter one row and type “Nil”.</p>
 
           <div id="admixtures-container" class="dynamic-group"></div>
 
@@ -316,7 +311,6 @@
 
           <!-- PARTIAL CEMENT REPLACEMENTS -->
           <h4 class="section-title">Partial Cement Replacements (SCMs)</h4>
-          <p class="subtle">If none, you may enter one row and type “Nil”.</p>
 
           <div id="scms-container" class="dynamic-group"></div>
 
@@ -334,13 +328,15 @@
             </button>
           </div>
 
+          <div id="form-error-summary" class="error-summary"></div>
+
           <p id="status-line" class="status-pill" style="display: none;"></p>
         </form>
       </section>
 
       <!-- SAVED MIXES TABLE -->
       <section class="card">
-        <h3>Saved Client Mixes (Local Only)</h3>
+        <h3>Saved Client Mixes</h3>
 
         <div class="table-actions">
           <button id="export-csv-btn" class="btn-primary small">Export CSV</button>
