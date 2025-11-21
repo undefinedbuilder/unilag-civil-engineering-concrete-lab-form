@@ -1,107 +1,80 @@
-# UNILAG Concrete Lab – Research Mix Intake Webform
+# UNILAG Concrete Lab – Mix Intake & PDF Report System
 
 ---
 
-## What the System Does
+## What the System Does (End‑to‑End)
 
-1. **User fills the Research Mix Form** (`index.html`) with all required student, mix, and project details.
-2. **Styling** (`style.css`) ensures a clean, responsive, professional UNILAG-branded interface.
+1. **User fills the web form** (`index.html`) and clicks **Submit**.
+2. **Styling** (`style.css`) keeps the UI clear, responsive, and accessible.
 3. **Client script** (`script.js`):
-   - Validates all required fields (text, numeric, dates, ratios, kg/m³ values).
-   - Dynamically handles **Admixtures** and **SCMs** with add/remove rows.
-   - Auto-calculates:
-     - **Water–Cement Ratio**
-     - **Normalized Mix Ratio** (for both kg/m³ mode and ratio mode)
-   - Allows switching between:
-     - **Kg/m³ Input Mode**, or  
-     - **Ratio Input Mode**
-   - Sends data to the backend (`/api/submit`) for Sheets storage.
-   - Saves a full local copy inside **LocalStorage** for offline retrieval.
-   - Generates a **UNILAG-header PDF** with logo, details, and an “Office Use Only” section.
-   - Shows a modal containing the **Application Number** assigned by the server.
-
-4. **Server function** (`submit.js`):
-   - Ensures request method is **POST** and validates all required fields.
-   - Determines whether data belongs to:
-     - **Research Sheet (Kg/m3)** or  
-     - **Research Sheet (Ratios)**
-   - Reads the **last used Application Number** from the correct sheet.
-   - Computes the next ID using the format:  
-     **`UNILAG-CR-Kxxxxxx`** or **`UNILAG-CR-Rxxxxxx`**
-   - Calculates w/c ratio and mix ratio (if missing).
-   - Saves:
-     - 1 main record row  
-     - All **Admixtures** to *Research Admixtures*  
-     - All **SCMs** to *Research SCMs*
-   - Returns `{ success: true, recordId, wcRatio, mixRatioString }`.
-
-5. **package.json**
-   - Declares `googleapis` for server-side Sheets integration.
+   - Validates that all fields are filled (numerics can be `0` where not applicable).
+   - Sends the payload to the server endpoint (`/api/submit`).
+   - If the server saves successfully, receives an **Application Number**.
+   - Generates a **one‑page PDF** with the logo, all data, and an “Office Use Only” box.
+   - Shows a **modal** with the assigned **Application Number**.
+4. **Server function** (`/api/submit` in `submit.js`):
+   - Checks that the request is **POST** and all required fields are present.
+   - Reads the **last used Application Number** from **column C** of the Google Sheet.
+   - Computes the **next ID** in the format `UNILAG-CL-[A-Z][6 digits]` (rolls over digits and letters A→Z→A).
+   - Appends the full row to the sheet (timestamps, mix, derived w/c).
+   - Returns `{ success: true, applicationNumber }` to the browser.
+5. **Dependencies** (`package.json`) declares `googleapis` for server-side Sheets access.
 
 ---
-
 ---
 
 ## Environment & Deployment
 
-### Required Environment Variables
+- **Required env vars** (set in Environment Variables):
+  - `GOOGLE_SERVICE_CREDENTIALS` – the **entire** service account JSON (stringified).
+  - `SHEET_ID` – the Google Spreadsheet ID (the long ID in the Sheet URL).
 
-Set these in your deployment platform:
-GOOGLE_SERVICE_CREDENTIALS = (Stringified JSON of Google Service Account)
-SHEET_ID = (Google Spreadsheet ID)
+- ## Google Sheets setup
 
-### Google Sheets Setup
+  Create a Google Sheet and note its ID. Use a sheet named **Sheet1** with headers (row 1). Suggested columns (A→Z) to match the saved row order:
 
-You must create **three sheets** in the same spreadsheet:
+  1. **Timestamp (server)**
+  2. **Crushing Date**
+  3. **Application Number**
+  4. **Client**
+  5. **Project**
+  6. **Email**
+  7. **Phone**
+  8. **Cement Brand**
+  9. **Manufacturer's Cement Type**
+  10. **Cement Type**
+  11. **SP Name**
+  12. **Cement**
+  13. **Slag**
+  14. **Fly Ash**
+  15. **Silica Fume**
+  16. **Limestone Filler**
+  17. **Water**
+  18. **Superplasticizer**
+  19. **Coarse Agg**
+  20. **Fine Agg**
+  21. **Derived w/c**
+  22. **Slump (mm)**
+  23. **Age (days)**
+  24. **Target (MPa)**
+  25. **Cubes Count**
+  26. **Notes**
 
-1. **Research Sheet (Kg/m3)**  
-2. **Research Sheet (Ratios)**  
-3. **Research Admixtures**  
-4. **Research SCMs**
-
-Ensure the column structure matches the `submit.js` layout for each sheet.
-
-#### Required Column Sections (Main Research Sheets)
-
-Columns typically include:
-
-- Application Number  
-- Timestamp  
-- Student & Project Info  
-- Concrete Type, Cement Type, Slump  
-- Either **kg/m³ values** or **ratio values**  
-- Derived W/C  
-- Derived Mix Ratio  
-- Notes
-
-> The API writes to ranges like:  
-> `Research Sheet (Kg/m3)!A:U` or  
-> `Research Sheet (Ratios)!A:U`  
-> Make sure the ranges match your actual sheet names.
+> The API writes to `Sheet1!A:Z`. Ensure the sheet name and range match or adjust in `submit.js`.
 
 ---
 
 ---
 
-## Notes on Validation, Calculations & Safety
+## Notes on Validation & Safety
 
-- The form **blocks submission** until all mandatory fields are valid.
-- Errors are shown clearly using highlighted fields and a summary box.
-- **Offline saving** is automatic — every successful submission is stored in LocalStorage.
-- W/C ratio and Mix Ratio are re-computed both client-side and server-side to ensure consistency.
-- The Application Number is assigned **exclusively on the server**, ensuring uniqueness.
-- A modal confirms successful save with the generated **Application Number**.
-- No PDF is created unless the Google Sheets save succeeds.
+- The client blocks submit until **all fields** are valid; numeric fields allow `0`.
+- On any server error, the UI insists on **Retry Save** and does **not** generate a PDF or display an Application Number.
+- Application Numbers are **server-assigned** and monotonically increase with rollover from `A999999` → `B000001`, through `Z999999` → `A000001`.
 
 ---
 
 ## Credits
-
-- **University of Lagos – Department of Civil & Environmental Engineering, Concrete Laboratory**  
-- Built with:  
-  - jsPDF for PDF generation  
-  - Google Sheets API for cloud storage  
-  - Vanilla JavaScript for client logic  
-  - Custom UNILAG-themed UI styling
-
----
+- 
+- University of Lagos – Department of Civil & Environmental Engineering, Concrete Laboratory.
+- jsPDF for client‑side PDF generation.
