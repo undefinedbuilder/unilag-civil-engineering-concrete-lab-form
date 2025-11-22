@@ -136,7 +136,7 @@ body {
   font-size: 0.75rem;
   background: rgba(248, 250, 252, 0.14);
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 10px;
   border: 1px solid rgba(248, 250, 252, 0.35);
   z-index: 1;
 }
@@ -636,4 +636,5 @@ tbody tr:hover {
   .dynamic-row {
     grid-template-columns: minmax(0, 1fr);
   }
+
 }
