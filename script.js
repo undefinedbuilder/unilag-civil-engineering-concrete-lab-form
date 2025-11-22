@@ -643,7 +643,7 @@ async function generatePDF(data) {
   doc.setFontSize(12);
   doc.text("CONCRETE LABORATORY – UNIVERSITY OF LAGOS", margin + 80, y + 20);
   doc.setFontSize(10);
-  doc.text("External Clients and Commercial Cube Tests", margin + 80, y + 38);
+  doc.text("External Clients/Commercial Cube Test Intake Form", margin + 80, y + 38);
   y += 80;
 
   if (data.recordId) {
@@ -1093,3 +1093,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
 
 });
+
