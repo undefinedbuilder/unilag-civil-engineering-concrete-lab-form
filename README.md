@@ -1,6 +1,6 @@
 # UNILAG Concrete Laboratory – Research Mix Cube Test System
 
-This project provides a complete **end-to-end intake system** for *student and research* concrete cube tests at the University of Lagos. It includes a vintage “manila folder”–style web form, automatic validation, Google Sheets integration, local archive of mixes, and a one-page PDF report generator.
+This project provides a comprehensive **end-to-end intake system** for student and research concrete cube tests at the University of Lagos. It includes a vintage-style web form, automatic validation, Google Sheets integration, a local archive of mixes, and a one-page PDF report generator.
 
 ---
 
@@ -11,7 +11,7 @@ This project provides a complete **end-to-end intake system** for *student and r
    - Supports **chemical admixtures** and **partial cement replacements (SCMs)** as dynamic rows.
 
 2. **Styling** gives a clean, responsive, UNILAG-branded interface with a **vintage archives / manila folder** theme.  
-   - Custom header with UNILAG logo, department and lab labels.
+   - Custom header with UNILAG logo, department, and lab labels.
    - Card-based layout for the intake form and “Saved Research Mixes” table. 
 
 3. **Front-end script**
@@ -22,7 +22,7 @@ This project provides a complete **end-to-end intake system** for *student and r
    - Computes and displays:  
      - **Water–Cement Ratio** (W/C).
      - **Normalized Mix Ratio (by cement)** from either kg/m³ or ratio inputs.
-   - Manages **dynamic rows** for chemical admixtures and SCMs (add / remove with buttons).
+   - Manages **dynamic rows** for chemical admixtures and SCMs (add/remove with buttons).
    - Saves each submitted mix to **browser localStorage** under a dedicated key and shows them in the **Saved Research Mixes** table.
    - Allows users to:  
      - **Click a saved row** to load that mix back into the form.
@@ -92,7 +92,7 @@ Each main **Research Sheet** row stores:
 - Student & contact info (name, matric number, phone, programme, supervisor)  
 - Thesis title  
 - Crushing date and concrete/cement type  
-- Slump / flow, age at testing, number of cubes, target strength  
+- Slump/flow, age at testing, number of cubes, target strength  
 - Either:  
   - Cement, water, fine/medium/coarse aggregates (kg/m³), or  
   - Cement, fine/medium/coarse aggregates, water (ratios)  
@@ -131,7 +131,7 @@ To make it easy for students and lab staff to manage multiple mixes **before** o
   - Concrete type  
   - W/C ratio (formatted to 2 d.p.)  
   - Date/time when it was saved.
-- Clicking a row **loads that record back into the form**, including admixtures and SCMs, so it can be edited or re-submitted.
+- Clicking a row **loads that record back into the form**, including admixtures and SCMs so that it can be edited or re-submitted.
 - Users can **Export CSV** of all locally stored research mixes or **Clear All** records from the browser.
 
 ---
@@ -157,3 +157,4 @@ To make it easy for students and lab staff to manage multiple mixes **before** o
 - **University of Lagos** – Department of Civil & Environmental Engineering  
 - **jsPDF** – for client-side PDF generation of the Research Mix Cube Test Intake Form.
 - **Google Sheets API (`googleapis`)** – for secure cloud data storage of research mixes, admixtures, and SCMs.
+
