@@ -1,149 +1,160 @@
-# UNILAG Concrete Laboratory – Research Mix Cube Test System
+# UNILAG Concrete Laboratory – External Client Cube Test System
 
-This project provides a comprehensive **end-to-end intake system** for student and research concrete cube tests at the University of Lagos. It includes a vintage-style web form, automatic validation, Google Sheets integration, a local archive of mixes, and a one-page PDF report generator.
+This project provides a comprehensive **end-to-end intake system** for external client/commercial concrete cube tests at the University of Lagos. It includes a responsive UNILAG-branded web form, automatic validation, Google Sheets integration, a local archive of client mixes, and a one-page PDF report generator.   
 
 ---
 
 ## What the System Does (Simple Overview)
 
-1. **Student / researcher fills the form** and clicks **Submit, Save & Generate PDF**.  
-   - Captures student details, supervisor, thesis title, mix overview, and cube testing parameters.
-   - Supports **chemical admixtures** and **partial cement replacements (SCMs)** as dynamic rows.
+1. **Client fills the form** and clicks **Submit, Save & Generate PDF**.  
+   - Captures company/client details, contact person, project/site, mix overview, and cube testing parameters.
+   - Supports **chemical admixtures** and **partial cement replacements (SCMs)** as dynamic add/remove rows.
 
-3. **Front-end script**
-   - Validates all required fields (student info, mix details, kg/ratio inputs, and any partially filled admixture/SCM rows). 
+3. **Front-end script** (`script.js`):
+   - Validates all required fields for client, project, mix, and cube test information before submitting.  
    - Supports **two input modes**:  
      - **Kg/m³ mode** – Cement, water, fine/medium/coarse aggregates as absolute quantities.
-     - **Ratio mode** – Cement-based ratios for aggregates and water (cement defaults to 1).
+     - **Ratio mode** – Material ratios by cement (cement defaults to 1).
    - Computes and displays:  
-     - **Water–Cement Ratio** (W/C).
-     - **Normalized Mix Ratio (by cement)** from either kg/m³ or ratio inputs.
-   - Manages **dynamic rows** for chemical admixtures and SCMs (add/remove with buttons).
-   - Saves each submitted mix to **browser localStorage** under a dedicated key and shows them in the **Saved Research Mixes** table.
-   - Allows users to:  
-     - **Click a saved row** to load that mix back into the form.
-     - **Export all saved mixes as CSV**.
-     - **Clear all local records** from the browser.
-   - Sends the mix data to the server endpoint **`/api/submit`** as JSON.
-   - Receives a unique **Application Number** and shows it in a modal dialog (Application Number card).
-   - Generates a **one-page PDF** with the UNILAG logo and all submitted data (research-specific layout). 
+     - **Water–Cement Ratio** (W/C).  
+     - **Normalized Mix Ratio (by cement)** from kg/m³ inputs.
+   - Manages **dynamic rows** for:  
+     - Chemical admixtures (name + dosage L/100 kg).
+     - SCMs (name + replacement percentage).
+   - Saves each submitted mix to **browser localStorage** under a dedicated key and shows them in the **Saved Research Mixes** table
+   - Renders the **Saved Client Mixes** table with: App No, input mode, client/company, type, W/C, and saved timestamp; clicking a row reloads that mix into the form.
+   - Provides buttons to **Export CSV** and **Clear All** saved records.   
+   - Sends the mix data to the server endpoint **`/api/submit`** as JSON and receives a unique **Application Number**.
+   - Shows the Application Number in a modal dialog and generates a **one-page PDF** with the UNILAG logo and all submitted data.   
 
 4. **Server function** (`submit.js`):
-   - Accepts only `POST` requests and rejects all other methods with `405`.  
+   - Accepts only `POST` requests and returns `405` for other methods.  
    - Validates `inputMode` (must be `"kg"` or `"ratio"`).
-   - Checks for missing required fields using three lists:  
-     - **Common** (student, supervisor, mix, and cube test info).
-     - **Kg/m³-specific** fields.
-     - **Ratio-specific** fields. 
-   - Uses `GOOGLE_SERVICE_CREDENTIALS` and `SHEET_ID` to authenticate with the Google Sheets API via `googleapis`.
-   - Reads the **last Application Number** from the appropriate sheet and generates the next ID in the format:  
-     - **`UNILAG-CR-K######`** – kg/m³ submissions  
-     - **`UNILAG-CR-R######`** – ratio submissions
-   - Computes **server-side** W/C ratio and normalized mix ratio using:  
-     - `kgRatioCalc()` for kg/m³ values.  
-     - `ratioCalc()` for ratio values.
+   - Checks for missing required fields using:  
+     - A **common** field list (client, contact, organisation type, project, crush date, concrete/cement type, slump, age, cube count, target strength, notes).
+     - **Kg/m³-specific** fields: cementContent, waterContent, fineAgg, mediumAgg, coarseAgg.
+     - **Ratio-specific** fields: ratioCement, ratioFine, ratioMedium, ratioCoarse, ratioWater.
+   - Uses `GOOGLE_SERVICE_CREDENTIALS` and `SHEET_ID` with `googleapis` to talk to the Google Sheets API.
+   - Reads the **last Application Number** from the correct sheet and generates the next ID in the format:  
+     - **`UNILAG-CL-K######`** – kg/m³ submissions  
+     - **`UNILAG-CL-R######`** – ratio submissions   
+   - Computes server-side **W/C ratio** and **normalized mix ratio string** for both kg and ratio modes.
    - Appends the main record to the correct Google Sheet tab:  
-     - **`Research Sheet (Kg/m3)`** or **`Research Sheet (Ratios)`**.
-   - Appends any **admixtures** to `Research Admixtures` and any **SCMs** to `Research SCMs`.
-   - Returns JSON:  
+     - **`Client Sheet (Kg/m3)`** or **`Client Sheet (Ratios)`**.
+   - Appends any **admixtures** to `Client Admixtures` and any **SCMs** to `Client SCMs`.
+   - Returns JSON such as:  
      ```json
      {
        "success": true,
-       "recordId": "UNILAG-CR-K000001",
+       "recordId": "UNILAG-CL-K000001",
        "mixRatioString": "1 : ...",
        "wcRatio": 0.45
      }
+     ```  
+
 5. **Dependencies** (`package.json`)  
-   - Uses the **Google Sheets API** via the official `googleapis` client.
+   - Uses the **Google Sheets API** via the official `googleapis` client library.
 
 ---
 
 ## Environment Setup
 
-Set these environment variables in your hosting platform:
+Set these environment variables in your hosting platform (Vercel, Netlify, etc.):
 
 - **`GOOGLE_SERVICE_CREDENTIALS`**  
-  The full **service account JSON**, stringified (e.g. `JSON.stringify({...})`).
+  The full **service account JSON**, stringified (for example: `JSON.stringify({ ... })`).
 
 - **`SHEET_ID`**  
-  The ID of your Google Spreadsheet (the long ID in the Sheet URL).
+  The ID of your Google Spreadsheet (the long ID inside the sheet URL).
 
-If either is missing or invalid, the server responds with a **500 – Server misconfigured: Missing sheet or credentials** error. 
+If either is missing or invalid, the server responds with a **500 – Server not configured (missing Google credentials)** error.
 
 ---
 
 ## Google Sheets Requirements
 
-Create a Google Sheet and **share it with the service account email** from your `GOOGLE_SERVICE_CREDENTIALS`. The system uses **four tabs**:
+Create a Google Sheet and **share it with the service account email** from your `GOOGLE_SERVICE_CREDENTIALS`.
 
-1. **Research Sheet (Kg/m3)** – for kg/m³-based research mixes.
-2. **Research Sheet (Ratios)** – for ratio-based research mixes.
-3. **Research Admixtures** – for per-mix admixture rows.
-4. **Research SCMs** – for per-mix partial cement replacements (SCMs).
+The system uses **four tabs**:
 
-Each main **Research Sheet** row stores:
+1. **Client Sheet (Kg/m3)** – for kg/m³-based client mixes.
+2. **Client Sheet (Ratios)** – for ratio-based client mixes.
+3. **Client Admixtures** – for per-mix admixture rows (optional).
+4. **Client SCMs** – for per-mix partial cement replacement rows (SCMs).
 
-- Application Number (e.g. `UNILAG-CR-K000123`)  
+Each main **Client Sheet** row stores (columns A–W):
+
+- Application Number (e.g. `UNILAG-CL-K000123`)  
 - Timestamp (ISO string)  
-- Student & contact info (name, matric number, phone, programme, supervisor)  
-- Thesis title  
-- Crushing date and concrete/cement type  
-- Slump/flow, age at testing, number of cubes, target strength  
+- Client/company name, contact email, phone  
+- Organisation type  
+- Contact person  
+- Project/site  
+- Crushing date  
+- Concrete type  
+- Cement type  
+- Slump (mm)  
+- Age at testing (days)  
+- Number of cubes submitted  
+- Target compressive strength (MPa)  
 - Either:  
-  - Cement, water, fine/medium/coarse aggregates (kg/m³), or  
-  - Cement, fine/medium/coarse aggregates, water (ratios)  
-- Computed **W/C ratio**  
-- Computed **normalized mix ratio string**  
-- Notes (e.g., grade of concrete or special remarks)
+  - Cement, water, fine, medium, and coarse aggregates (kg/m³), or  
+  - Cement, fine, medium, coarse aggregates, and water (ratios)  
+- Computed **W/C ratio** (numeric)  
+- **Normalized mix ratio** string  
+- Notes (e.g., grade of concrete, site information)  
 
-Each **Research Admixtures** row stores:
+Each **Client Admixtures** row stores:
 
 - Application Number, timestamp  
-- Student name, matric number  
+- Client name  
+- Contact email  
 - Admixture index (1, 2, 3, …)  
 - Admixture name  
-- Dosage (L/100 kg of cement)
+- Dosage (L/100 kg of cement)  
 
-Each **Research SCMs** row stores:
+Each **Client SCMs** row stores:
 
 - Application Number, timestamp  
-- Student name, matric number  
+- Client name  
+- Contact email  
 - SCM index (1, 2, 3, …)  
 - SCM name  
-- SCM replacement percentage (%)
+- SCM replacement percentage (%)  
 
 ---
 
-## Local Research Archive (Browser Storage)
+## Local Client Archive (Browser Storage)
 
-To make it easy for students and lab staff to manage multiple mixes **before** or **alongside** server submission, the front-end keeps a **local archive**:
+To help clients and lab staff manage multiple submissions **before** or alongside server submission, the front-end maintains a **local archive**:
 
-- All successfully submitted mixes are saved in `localStorage` under the key:  
-  `unilag-concrete-lab-research-mixes`.
-- The **Saved Research Mixes** table shows a compact list with:  
+- All successfully submitted mixes are saved in `localStorage` under:  
+  `unilag-concrete-lab-client-mixes`.
+- The **Saved Client Mixes** table displays:  
   - Application Number  
   - Input mode (Kg/m³ or Ratio)  
-  - Student / Researcher name  
+  - Client / Company  
   - Concrete type  
-  - W/C ratio (formatted to 2 d.p.)  
-  - Date/time when it was saved.
-- Clicking a row **loads that record back into the form**, including admixtures and SCMs so that it can be edited or re-submitted.
-- Users can **Export CSV** of all locally stored research mixes or **Clear All** records from the browser.
+  - W/C ratio (formatted)  
+  - Date/time saved.   
+- Clicking a row **loads that record back into the form**, including admixtures and SCMs, so that it can be edited or re-submitted.   
+- Users can:  
+  - **Export CSV** of all locally stored client mixes.
+  - **Clear All** saved records from the browser.
 
 ---
 
 ## Validation & Safety
 
-- The frontend blocks submission until **all required fields** are filled, including conditionally required fields when “Other” is selected for concrete or cement type.
-- Any partially filled **admixture** or **SCM** rows are treated as incomplete and flagged until both name and dosage/percent are entered. 
-- The server **re-validates everything**, ensuring no record is written to the Sheet with missing critical data.
-- Both front-end and back-end compute W/C ratio and mix ratio; the server result is treated as the **source of truth** and used to update the UI before generating the PDF.   
-- Application numbers **always increase** and are robust to gaps or malformed old entries:  
-  `UNILAG-CR-K999999 → UNILAG-CR-K000001`. 
-- If the API call fails for any reason, the system still:  
+- The front-end blocks submission until **all required fields** are filled, including conditional “Other” text boxes for concrete or cement type when selected.   
+- Any partially filled **admixture** or **SCM** rows are treated as incomplete and not included unless both name and dosage/percent are supplied.
+- The server **re-validates everything** and rejects requests with any missing critical data.
+- Both front-end and back-end compute W/C ratio and normalized mix ratio; the server result is treated as the **source of truth** and is used to update the UI before generating the PDF.   
+- Application numbers **always increase** and safely roll over if they reach `999999` (e.g., `UNILAG-CL-K999999 → UNILAG-CL-K000001`).
+- If the API call fails for any reason, the system still:
   - Saves the mix locally,  
   - Generates the PDF, and  
-  - Shows a clear status message that the server submission did not succeed.
+  - Shows a clear status message that the server submission did not succeed.  
 
 ---
 
@@ -151,7 +162,5 @@ To make it easy for students and lab staff to manage multiple mixes **before** o
 
 - **Jesuto Ilugbo** – Project Lead & App Developer
 - **University of Lagos** – Department of Civil & Environmental Engineering  
-- **jsPDF** – for client-side PDF generation of the Research Mix Cube Test Intake Form.
-- **Google Sheets API (`googleapis`)** – for secure cloud data storage of research mixes, admixtures, and SCMs.
-
-
+- **jsPDF** – for client-side PDF generation of the External Client Cube Test Report.
+- **Google Sheets API (`googleapis`)** – for secure cloud data storage of client mixes, admixtures, and SCMs.
