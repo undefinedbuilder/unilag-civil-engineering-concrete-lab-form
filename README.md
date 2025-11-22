@@ -10,10 +10,6 @@ This project provides a comprehensive **end-to-end intake system** for student a
    - Captures student details, supervisor, thesis title, mix overview, and cube testing parameters.
    - Supports **chemical admixtures** and **partial cement replacements (SCMs)** as dynamic rows.
 
-2. **Styling** gives a clean, responsive, UNILAG-branded interface with a **vintage archives / manila folder** theme.  
-   - Custom header with UNILAG logo, department, and lab labels.
-   - Card-based layout for the intake form and “Saved Research Mixes” table. 
-
 3. **Front-end script**
    - Validates all required fields (student info, mix details, kg/ratio inputs, and any partially filled admixture/SCM rows). 
    - Supports **two input modes**:  
@@ -157,4 +153,5 @@ To make it easy for students and lab staff to manage multiple mixes **before** o
 - **University of Lagos** – Department of Civil & Environmental Engineering  
 - **jsPDF** – for client-side PDF generation of the Research Mix Cube Test Intake Form.
 - **Google Sheets API (`googleapis`)** – for secure cloud data storage of research mixes, admixtures, and SCMs.
+
 
