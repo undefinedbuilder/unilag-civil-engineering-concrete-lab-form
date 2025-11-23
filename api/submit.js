@@ -317,8 +317,6 @@ export default async function handler(req, res) {
     // Q: ratioFine
     // R: ratioCoarse
     // S: waterCementRatio (input)
-    // T: wcRatio (derived)
-    // U: mixRatioString
     // V: notes
     mainRow = [
       [
@@ -341,8 +339,6 @@ export default async function handler(req, res) {
         ratioFine,
         ratioCoarse,
         waterCementRatio,
-        wcRatio,
-        mixRatioString,
         notes,
       ],
     ];
@@ -447,4 +443,5 @@ export default async function handler(req, res) {
     mixRatioString,
   });
 }
+
 
