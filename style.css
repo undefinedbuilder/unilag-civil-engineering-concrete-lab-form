@@ -592,3 +592,11 @@ tbody tr:hover {
 .small-note {
   margin-top: 6px;
 }
+
+footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 20px auto 40px;
+  padding: 10px;
+}
