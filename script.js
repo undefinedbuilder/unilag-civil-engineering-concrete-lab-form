@@ -117,10 +117,16 @@ function createScmRow(data = {}) {
 function toggleDerivedBoxes(show) {
   const wcBox = document.getElementById("wcratio-box");
   const mixBox = document.getElementById("mixratio-box");
-  if (!wcBox || !mixBox) return;
+  const boxes = [wcBox, mixBox];
 
-  wcBox.style.display = show ? "" : "none";
-  mixBox.style.display = show ? "" : "none";
+  boxes.forEach((box) => {
+    if (!box) return;
+    if (show) {
+      box.classList.add("is-visible");
+    } else {
+      box.classList.remove("is-visible");
+    }
+  });
 }
 
 /**
@@ -168,41 +174,68 @@ function updateDerivedMixValues() {
   let wcRatio = null;
   let mixRatioString = "";
 
-  if (mode === "kg") {
-    const cementKg = document.getElementById("cementKg").value;
-    const waterKg = document.getElementById("waterKg").value;
-    const fineAggKg = document.getElementById("fineAggKg").value;
-    const coarseAggKg = document.getElementById("coarseAggKg").value;
-
-    ({ wcRatio, mixRatioString } = computeDerivedFromKg(
-      cementKg,
-      waterKg,
-      fineAggKg,
-      coarseAggKg
-    ));
-  } else {
-    const ratioCement = document.getElementById("ratioCement").value;
-    const ratioFine = document.getElementById("ratioFine").value;
-    const ratioCoarse = document.getElementById("ratioCoarse").value;
-    const waterCementRatio = document.getElementById("waterCementRatio").value;
-
-    ({ wcRatio, mixRatioString } = computeDerivedFromRatio(
-      ratioCement,
-      ratioFine,
-      ratioCoarse,
-      waterCementRatio
-    ));
-  }
-
   const wcSpan = document.getElementById("wcRatioValue");
   const mixSpan = document.getElementById("mixRatioValue");
 
-  if (wcRatio === null || !mixRatioString) {
+  // Helper to clear text + hide boxes
+  function clearDerived() {
+    if (wcSpan) wcSpan.textContent = "";
+    if (mixSpan) mixSpan.textContent = "";
     toggleDerivedBoxes(false);
+  }
+
+  if (mode === "kg") {
+    const cementEl = document.getElementById("cementKg");
+    const waterEl = document.getElementById("waterKg");
+    const fineEl = document.getElementById("fineAggKg");
+    const coarseEl = document.getElementById("coarseAggKg");
+
+    const vals = [cementEl, waterEl, fineEl, coarseEl].map((el) =>
+      el ? String(el.value).trim() : ""
+    );
+
+    const allFilled = vals.every((v) => v !== "");
+    if (!allFilled) {
+      clearDerived();
+      return { wcRatio, mixRatioString };
+    }
+
+    ({ wcRatio, mixRatioString } = computeDerivedFromKg(
+      vals[0],
+      vals[1],
+      vals[2],
+      vals[3]
+    ));
+  } else {
+    const ratioCEl = document.getElementById("ratioCement");
+    const ratioFEl = document.getElementById("ratioFine");
+    const ratioCoEl = document.getElementById("ratioCoarse");
+    const wOverCEl = document.getElementById("waterCementRatio");
+
+    const vals = [ratioCEl, ratioFEl, ratioCoEl, wOverCEl].map((el) =>
+      el ? String(el.value).trim() : ""
+    );
+
+    const allFilled = vals.every((v) => v !== "");
+    if (!allFilled) {
+      clearDerived();
+      return { wcRatio, mixRatioString };
+    }
+
+    ({ wcRatio, mixRatioString } = computeDerivedFromRatio(
+      vals[0],
+      vals[1],
+      vals[2],
+      vals[3]
+    ));
+  }
+
+  if (wcRatio === null || !mixRatioString) {
+    clearDerived();
   } else {
     if (wcSpan) wcSpan.textContent = wcRatio.toFixed(2);
     if (mixSpan) mixSpan.textContent = mixRatioString;
-    toggleDerivedBoxes(true);
+    toggleDerivedBoxes(true); // 👈 fade/slide in with animation
   }
 
   return { wcRatio, mixRatioString };
@@ -1032,6 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
