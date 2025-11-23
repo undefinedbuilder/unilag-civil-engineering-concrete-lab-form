@@ -74,7 +74,7 @@ function createAdmixtureRow(data = {}) {
 
     <label>
       <span class="label-line">
-        Dosage (L/100kg of Cement) <span class="required-asterisk">*</span>
+        Dosage (% by weight of Cement) <span class="required-asterisk">*</span>
       </span>
       <input type="text" name="adm_dosage" value="${data.dosage || ""}">
     </label>
@@ -740,7 +740,7 @@ async function generatePDF(data) {
   if (data.admixtures && data.admixtures.length) {
     data.admixtures.forEach((a, i) => {
       doc.text(
-        `${i + 1}. ${a.name || ""} | ${a.dosage || ""} L/100kg`,
+        `${i + 1}. ${a.name || ""} | ${a.dosage || ""} %`,
         margin,
         y
       );
@@ -1032,3 +1032,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
