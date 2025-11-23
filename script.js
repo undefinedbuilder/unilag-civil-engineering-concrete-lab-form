@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------
-   UNILAG CONCRETE LAB – CLIENT FORM FRONT-END
+   UNILAG CONCRETE LAB – CLIENT FORM
 ----------------------------------------------------------- */
 
 const STORAGE_KEY = "unilag-concrete-lab-client-mixes";
@@ -44,11 +44,6 @@ function setStatusLine(message, type = "info") {
   if (type === "success") el.classList.add("status-success");
   else if (type === "error") el.classList.add("status-error");
   else el.classList.add("status-info");
-}
-
-function getSelectedInputMode() {
-  const checked = document.querySelector('input[name="inputMode"]:checked');
-  return checked ? checked.value : "kg";
 }
 
 function setDateToToday(inputEl) {
@@ -112,7 +107,7 @@ function createScmRow(data = {}) {
   return row;
 }
 
-/* ---------- Derived Mix Calculations (Kg & Ratio) ---------- */
+/* ---------- Derived Mix Calculations ---------- */
 
 function toggleDerivedBoxes(show) {
   const wcBox = document.getElementById("wcratio-box");
@@ -131,31 +126,13 @@ function toggleDerivedBoxes(show) {
 }
 
 /**
- * Compute wcRatio and mixRatioString from kg inputs.
- */
-function computeDerivedFromKg(cementKg, waterKg, fineAggKg, coarseAggKg) {
-  const c = Number(cementKg);
-  const w = Number(waterKg);
-  const f = Number(fineAggKg);
-  const co = Number(coarseAggKg);
-
-  if (!c || c <= 0 || [w, f, co].some((v) => isNaN(v))) {
-    return { wcRatio: null, mixRatioString: "" };
-  }
-
-  const wcRatio = w / c;
-  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
-  return { wcRatio, mixRatioString };
-}
-
-/**
  * Compute wcRatio and mixRatioString from ratio inputs.
  */
 function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCementRatio) {
   const c = Number(ratioCement);
   const f = Number(ratioFine);
   const co = Number(ratioCoarse);
-  const wOverC = Number(waterCementRatio); 
+  const wOverC = Number(waterCementRatio);
 
   if (!c || c <= 0 || [f, co, wOverC].some((v) => isNaN(v))) {
     return { wcRatio: null, mixRatioString: "" };
@@ -167,104 +144,56 @@ function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCemen
 }
 
 /**
- * Update derived W/C and mix ratio display
+ * Update derived W/C and mix ratio display (ratio mode only)
  */
 function updateDerivedMixValues() {
-  const mode = getSelectedInputMode();
-
   let wcRatio = null;
   let mixRatioString = "";
 
   const wcSpan = document.getElementById("wcRatioValue");
   const mixSpan = document.getElementById("mixRatioValue");
 
-  // Helper to clear text + hide boxes
   function clearDerived() {
     if (wcSpan) wcSpan.textContent = "";
     if (mixSpan) mixSpan.textContent = "";
     toggleDerivedBoxes(false);
+    return { wcRatio: null, mixRatioString: "" };
   }
 
-  if (mode === "kg") {
-    const cementEl = document.getElementById("cementKg");
-    const waterEl = document.getElementById("waterKg");
-    const fineEl = document.getElementById("fineAggKg");
-    const coarseEl = document.getElementById("coarseAggKg");
+  const ratioCEl = document.getElementById("ratioCement");
+  const ratioFEl = document.getElementById("ratioFine");
+  const ratioCoEl = document.getElementById("ratioCoarse");
+  const wOverCEl = document.getElementById("waterCementRatio");
 
-    const vals = [cementEl, waterEl, fineEl, coarseEl].map((el) =>
-      el ? String(el.value).trim() : ""
-    );
-
-    const allFilled = vals.every((v) => v !== "");
-    if (!allFilled) {
-      clearDerived();
-      return { wcRatio, mixRatioString };
-    }
-
-    ({ wcRatio, mixRatioString } = computeDerivedFromKg(
-      vals[0],
-      vals[1],
-      vals[2],
-      vals[3]
-    ));
-  } else {
-    const ratioCEl = document.getElementById("ratioCement");
-    const ratioFEl = document.getElementById("ratioFine");
-    const ratioCoEl = document.getElementById("ratioCoarse");
-    const wOverCEl = document.getElementById("waterCementRatio");
-
-    const vals = [ratioCEl, ratioFEl, ratioCoEl, wOverCEl].map((el) =>
-      el ? String(el.value).trim() : ""
-    );
-
-    const allFilled = vals.every((v) => v !== "");
-    if (!allFilled) {
-      clearDerived();
-      return { wcRatio, mixRatioString };
-    }
-
-    ({ wcRatio, mixRatioString } = computeDerivedFromRatio(
-      vals[0],
-      vals[1],
-      vals[2],
-      vals[3]
-    ));
+  if (!ratioCEl || !ratioFEl || !ratioCoEl || !wOverCEl) {
+    return clearDerived();
   }
+
+  const vals = [ratioCEl, ratioFEl, ratioCoEl, wOverCEl].map((el) =>
+    String(el.value).trim()
+  );
+
+  const allFilled = vals.every((v) => v !== "");
+  if (!allFilled) {
+    return clearDerived();
+  }
+
+  ({ wcRatio, mixRatioString } = computeDerivedFromRatio(
+    vals[0],
+    vals[1],
+    vals[2],
+    vals[3]
+  ));
 
   if (wcRatio === null || !mixRatioString) {
-    clearDerived();
-  } else {
-    if (wcSpan) wcSpan.textContent = wcRatio.toFixed(2);
-    if (mixSpan) mixSpan.textContent = mixRatioString;
-    toggleDerivedBoxes(true); // 👈 fade/slide in with animation
+    return clearDerived();
   }
+
+  if (wcSpan) wcSpan.textContent = wcRatio.toFixed(2);
+  if (mixSpan) mixSpan.textContent = mixRatioString;
+  toggleDerivedBoxes(true); // animated show via CSS
 
   return { wcRatio, mixRatioString };
-}
-
-/* ---------- Input Mode UI ---------- */
-
-function syncInputModeUI() {
-  const mode = getSelectedInputMode();
-  const kgInputs = document.getElementById("kgInputs");
-  const ratioInputs = document.getElementById("ratioInputs");
-  const kgHeading = document.getElementById("kgHeading");
-  const ratioHeading = document.getElementById("ratioHeading");
-
-  if (mode === "kg") {
-    if (kgInputs) kgInputs.style.display = "";
-    if (kgHeading) kgHeading.style.display = "";
-    if (ratioInputs) ratioInputs.style.display = "none";
-    if (ratioHeading) ratioHeading.style.display = "none";
-  } else {
-    if (kgInputs) kgInputs.style.display = "none";
-    if (kgHeading) kgHeading.style.display = "none";
-    if (ratioInputs) ratioInputs.style.display = "";
-    if (ratioHeading) ratioHeading.style.display = "";
-  }
-
-  // Recalculate derived values when mode changes
-  updateDerivedMixValues();
 }
 
 /* ---------- Show / Hide "Other" fields ---------- */
@@ -286,8 +215,6 @@ function syncCementTypeOther() {
 /* ---------- Validation ---------- */
 
 function validateForm() {
-  const mode = getSelectedInputMode();
-
   const commonRequired = [
     "clientName",
     "contactEmail",
@@ -304,8 +231,12 @@ function validateForm() {
     "concreteGrade",
   ];
 
-  const kgRequired = ["cementKg", "waterKg", "fineAggKg", "coarseAggKg"];
-  const ratioRequired = ["ratioCement", "ratioFine", "ratioCoarse", "waterCementRatio"];
+  const ratioRequired = [
+    "ratioCement",
+    "ratioFine",
+    "ratioCoarse",
+    "waterCementRatio",
+  ];
 
   document.querySelectorAll(".error").forEach((el) => el.classList.remove("error"));
 
@@ -334,11 +265,7 @@ function validateForm() {
     checkId("cementTypeOther");
   }
 
-  if (mode === "kg") {
-    kgRequired.forEach(checkId);
-  } else {
-    ratioRequired.forEach(checkId);
-  }
+  ratioRequired.forEach(checkId);
 
   // If admixture rows exist, each must be complete
   const admRows = document.querySelectorAll("#admixtures-container .dynamic-row");
@@ -392,8 +319,6 @@ function validateForm() {
 /* ---------- Collect Form Data ---------- */
 
 function collectFormData() {
-  const mode = getSelectedInputMode();
-
   // Concrete type (handling "Other")
   let concreteType = document.getElementById("concreteType").value;
   if (concreteType === "Other") {
@@ -426,13 +351,7 @@ function collectFormData() {
     }
   });
 
-  // Kg inputs
-  const cementKg = Number(document.getElementById("cementKg").value || 0);
-  const waterKg = Number(document.getElementById("waterKg").value || 0);
-  const fineAggKg = Number(document.getElementById("fineAggKg").value || 0);
-  const coarseAggKg = Number(document.getElementById("coarseAggKg").value || 0);
-
-  // Ratio inputs
+  // Ratio inputs (numbers)
   const ratioCement = Number(document.getElementById("ratioCement").value || 0);
   const ratioFine = Number(document.getElementById("ratioFine").value || 0);
   const ratioCoarse = Number(document.getElementById("ratioCoarse").value || 0);
@@ -440,12 +359,11 @@ function collectFormData() {
     document.getElementById("waterCementRatio").value || 0
   );
 
-  // Compute derived values (single function for both modes)
+  // Compute derived values
   const { wcRatio, mixRatioString } = updateDerivedMixValues();
 
-  // Main payload
   const data = {
-    inputMode: mode,
+    inputMode: "ratio", // always ratio now
 
     clientName: document.getElementById("clientName").value.trim(),
     contactEmail: document.getElementById("contactEmail").value.trim(),
@@ -461,12 +379,6 @@ function collectFormData() {
     cubesCount: Number(document.getElementById("cubesCount").value || 0),
     concreteGrade: document.getElementById("concreteGrade").value.trim(),
     notes: document.getElementById("notes").value.trim(),
-
-    // Kg inputs
-    cementKg,
-    waterKg,
-    fineAggKg,
-    coarseAggKg,
 
     // Ratio inputs
     ratioCement,
@@ -535,7 +447,7 @@ function renderSavedRecords() {
 
     tr.innerHTML = `
       <td>${r.recordId || "—"}</td>
-      <td>${r.inputMode === "ratio" ? "Ratio" : "Kg/m³"}</td>
+      <td>${r.inputMode === "ratio" ? "Ratio" : (r.inputMode || "")}</td>
       <td>${r.clientName || ""}</td>
       <td>${r.concreteType || ""}</td>
       <td>${wcText}</td>
@@ -613,23 +525,6 @@ function loadRecordIntoForm(r) {
       cementOther.value = "";
     }
   }
-
-  // Input mode
-  const mode = r.inputMode === "ratio" ? "ratio" : "kg";
-  const modeKg = document.getElementById("modeKg");
-  const modeRatio = document.getElementById("modeRatio");
-  if (mode === "kg") {
-    if (modeKg) modeKg.checked = true;
-  } else if (modeRatio) {
-    modeRatio.checked = true;
-  }
-  syncInputModeUI();
-
-  // Kg inputs
-  document.getElementById("cementKg").value = r.cementKg ?? "";
-  document.getElementById("waterKg").value = r.waterKg ?? "";
-  document.getElementById("fineAggKg").value = r.fineAggKg ?? "";
-  document.getElementById("coarseAggKg").value = r.coarseAggKg ?? "";
 
   // Ratio inputs
   document.getElementById("ratioCement").value = r.ratioCement ?? "1";
@@ -726,42 +621,17 @@ async function generatePDF(data) {
   y += 20;
 
   doc.setFont("helvetica", "bold");
-  doc.text(
-    data.inputMode === "ratio"
-      ? "Material Quantities (Mix Ratio & W/C)"
-      : "Material Quantities (kg/m³)",
-    margin,
-    y
-  );
+  doc.text("Material Quantities (Mix Ratio & W/C)", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
 
-  if (data.inputMode === "kg") {
-    doc.text(`Cement (kg/m³): ${data.cementKg}`, margin, y);
-    y += 14;
-    doc.text(`Water (kg/m³): ${data.waterKg}`, margin, y);
-    y += 14;
-    doc.text(`Fine Aggregate (kg/m³): ${data.fineAggKg}`, margin, y);
-    y += 14;
-    doc.text(`Coarse Aggregate (kg/m³): ${data.coarseAggKg}`, margin, y);
-    y += 14;
-  } else {
-    doc.text(`Cement : ${data.ratioCement}`, margin, y);
-    y += 14;
-    doc.text(`Fine Aggregate: ${data.ratioFine}`, margin, y);
-    y += 14;
-    doc.text(`Coarse Aggregate : ${data.ratioCoarse}`, margin, y);
-    y += 14;
-    doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio}`, margin, y);
-    y += 14;
-  }
-
-  const wcRatio =
-    typeof data.wcRatio === "number" && !isNaN(data.wcRatio)
-      ? data.wcRatio.toFixed(2)
-      : String(data.wcRatio || "");
-
-  doc.text(`Derived W/C Ratio: ${wcRatio}`, margin, y);
+  doc.text(`Cement : ${data.ratioCement}`, margin, y);
+  y += 14;
+  doc.text(`Fine Aggregate: ${data.ratioFine}`, margin, y);
+  y += 14;
+  doc.text(`Coarse Aggregate : ${data.ratioCoarse}`, margin, y);
+  y += 14;
+  doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio}`, margin, y);
   y += 14;
   doc.text(`Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`, margin, y);
   y += 20;
@@ -816,6 +686,63 @@ async function generatePDF(data) {
   doc.save(filename);
 }
 
+ // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
+  const boxHeight = 110;
+  const boxWidth = pageW - margin * 2;
+  const copyrightGap = 20;
+  const boxY = pageH - margin - boxHeight - copyrightGap;
+
+  // Draw box
+  doc.setDrawColor(0);
+  doc.rect(margin, boxY, boxWidth, boxHeight);
+
+  // Box title and content
+  let boxInnerY = boxY + 18;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("FOR OFFICE USE ONLY", pageW / 2, boxInnerY, { align: "center" });
+
+  boxInnerY += 18;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  doc.text(
+    "Tested by:   ____________________________    Date: ________________",
+    margin + 10,
+    boxInnerY
+  );
+  boxInnerY += 14;
+
+  doc.text(
+    "Compressive Strength:  ____________________________",
+    margin + 10,
+    boxInnerY
+  );
+  boxInnerY += 14;
+
+  doc.text(
+    "Remarks:     _________________________________________________",
+    margin + 10,
+    boxInnerY
+  );
+
+  // ---------- COPYRIGHT LINE ----------
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(
+    "© Concrete Laboratory, University of Lagos",
+    pageW / 2,
+    pageH - margin,
+    { align: "center" }
+  );
+
+  // ---------- SAVE ----------
+  const filename = `${sanitizeFilename(
+    data.clientName || "Client"
+  )}_${sanitizeFilename(data.projectSite || "CubeTest")}.pdf`;
+  doc.save(filename);
+}
+
 /* ---------- CSV Export & Clear ---------- */
 
 function exportCsv() {
@@ -838,10 +765,6 @@ function exportCsv() {
     "AgeDays",
     "CubesCount",
     "concreteGrade",
-    "CementKg",
-    "WaterKg",
-    "FineAggKg",
-    "CoarseAggKg",
     "RatioCement",
     "RatioFine",
     "RatioCoarse",
@@ -871,10 +794,6 @@ function exportCsv() {
       r.ageDays ?? "",
       r.cubesCount ?? "",
       r.concreteGrade ?? "",
-      r.cementKg ?? "",
-      r.waterKg ?? "",
-      r.fineAggKg ?? "",
-      r.coarseAggKg ?? "",
       r.ratioCement ?? "",
       r.ratioFine ?? "",
       r.ratioCoarse ?? "",
@@ -968,14 +887,13 @@ function resetForm() {
   form.reset();
 
   // Reset some defaults
-  document.getElementById("ratioCement").value = "1";
-  document.getElementById("modeKg").checked = true;
+  const ratioC = document.getElementById("ratioCement");
+  if (ratioC) ratioC.value = "1";
 
   // Clear dynamic groups
   document.getElementById("admixtures-container").innerHTML = "";
   document.getElementById("scms-container").innerHTML = "";
 
-  syncInputModeUI();
   toggleDerivedBoxes(false);
   setStatusLine("", "info");
 
@@ -1006,18 +924,6 @@ function attachEventListeners() {
     clearAllBtn.addEventListener("click", clearAllRecords);
   }
 
-  // Input mode radios
-  const modeKg = document.getElementById("modeKg");
-  const modeRatio = document.getElementById("modeRatio");
-  if (modeKg) modeKg.addEventListener("change", syncInputModeUI);
-  if (modeRatio) modeRatio.addEventListener("change", syncInputModeUI);
-
-  // Kg inputs → recalc derived
-  ["cementKg", "waterKg", "fineAggKg", "coarseAggKg"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("input", updateDerivedMixValues);
-  });
-
   // Ratio inputs → recalc derived
   ["ratioCement", "ratioFine", "ratioCoarse", "waterCementRatio"].forEach((id) => {
     const el = document.getElementById(id);
@@ -1041,6 +947,16 @@ function attachEventListeners() {
     });
   }
 
+  // Show/hide "Other" fields
+  const concreteSelect = document.getElementById("concreteType");
+  if (concreteSelect) {
+    concreteSelect.addEventListener("change", syncConcreteTypeOther);
+  }
+  const cementSelect = document.getElementById("cementType");
+  if (cementSelect) {
+    cementSelect.addEventListener("change", syncCementTypeOther);
+  }
+
   // Saved table row click → load into form
   const tbody = document.getElementById("mixes-table-body");
   if (tbody) {
@@ -1059,19 +975,9 @@ function attachEventListeners() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setDateToToday(document.getElementById("crushDate"));
-  syncInputModeUI();
   syncConcreteTypeOther();
   syncCementTypeOther();
+  toggleDerivedBoxes(false);
   renderSavedRecords();
   attachEventListeners();
 });
-
-
-
-
-
-
-
-
-
-
