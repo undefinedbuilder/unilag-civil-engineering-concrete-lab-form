@@ -730,12 +730,12 @@ async function generatePDF(data) {
 
   // Row 1: Tested by / Date – spaced horizontally
   doc.text(
-    "Tested by: _________________________________________________________",
+    "Tested by:  _________________________________________",
     boxX + innerMargin,
     boxInnerY
   );
   doc.text(
-    "Date: _____________________________",
+    "Date:  _________________________________________",
     boxX + boxWidth / 2,
     boxInnerY
   );
@@ -744,7 +744,7 @@ async function generatePDF(data) {
 
   // Row 2: Compressive Strength
   doc.text(
-    "Compressive Strength (MPa): ___________________________________________________________________-________",
+    "Compressive Strength (MPa): _____________________________________________________________________________",
     boxX + innerMargin,
     boxInnerY
   );
@@ -1037,5 +1037,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
