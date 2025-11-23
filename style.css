@@ -421,6 +421,10 @@ button {
   color: #ffffff;
   font-weight: 600;
   padding-inline: 18px;
+  font-size: 0.8rem;
+  white-space: normal;
+  line-height: 1.2;
+  padding: 10px 14px;  
 }
 
 .btn-secondary {
@@ -555,5 +559,6 @@ tbody tr:hover {
 .small-note {
   margin-top: 6px;
 }
+
 
 
