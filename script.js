@@ -735,7 +735,7 @@ async function generatePDF(data) {
     boxInnerY
   );
   doc.text(
-    "Date:  _________________________________________",
+    "Date:  _____________________________________________",
     boxX + boxWidth / 2,
     boxInnerY
   );
@@ -1037,6 +1037,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
