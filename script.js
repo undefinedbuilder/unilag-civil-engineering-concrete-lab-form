@@ -713,11 +713,11 @@ async function generatePDF(data) {
     doc.text(`Coarse Aggregate (kg/m³): ${data.coarseAggKg}`, margin, y);
     y += 14;
   } else {
-    doc.text(`Cement (part): ${data.ratioCement}`, margin, y);
+    doc.text(`Cement : ${data.ratioCement}`, margin, y);
     y += 14;
-    doc.text(`Fine Aggregate (part): ${data.ratioFine}`, margin, y);
+    doc.text(`Fine Aggregate: ${data.ratioFine}`, margin, y);
     y += 14;
-    doc.text(`Coarse Aggregate (part): ${data.ratioCoarse}`, margin, y);
+    doc.text(`Coarse Aggregate : ${data.ratioCoarse}`, margin, y);
     y += 14;
     doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio}`, margin, y);
     y += 14;
@@ -1032,4 +1032,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
