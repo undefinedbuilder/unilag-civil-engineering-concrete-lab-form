@@ -74,7 +74,7 @@ function createAdmixtureRow(data = {}) {
 
     <label>
       <span class="label-line">
-        Dosage (% by weight of Cement) <span class="required-asterisk">*</span>
+        Dosage (% of weight of Cement) <span class="required-asterisk">*</span>
       </span>
       <input type="text" name="adm_dosage" value="${data.dosage || ""}">
     </label>
@@ -1065,6 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
