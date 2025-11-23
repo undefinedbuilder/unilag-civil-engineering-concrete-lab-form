@@ -301,8 +301,7 @@ function validateForm() {
     "slump",
     "ageDays",
     "cubesCount",
-    "targetStrength",
-    "notes",
+    "concreteGrade",
   ];
 
   const kgRequired = ["cementKg", "waterKg", "fineAggKg", "coarseAggKg"];
@@ -460,7 +459,7 @@ function collectFormData() {
     slump: Number(document.getElementById("slump").value || 0),
     ageDays: Number(document.getElementById("ageDays").value || 0),
     cubesCount: Number(document.getElementById("cubesCount").value || 0),
-    targetStrength: Number(document.getElementById("targetStrength").value || 0),
+    concreteGrade: Number(document.getElementById("concreteGrade").value || 0),
     notes: document.getElementById("notes").value.trim(),
 
     // Kg inputs
@@ -560,7 +559,7 @@ function loadRecordIntoForm(r) {
   document.getElementById("slump").value = r.slump ?? "";
   document.getElementById("ageDays").value = r.ageDays ?? "";
   document.getElementById("cubesCount").value = r.cubesCount ?? "";
-  document.getElementById("targetStrength").value = r.targetStrength ?? "";
+  document.getElementById("concreteGrade").value = r.concreteGrade ?? "";
   document.getElementById("notes").value = r.notes || "";
 
   // Concrete Type
@@ -723,7 +722,7 @@ async function generatePDF(data) {
   y += 14;
   doc.text(`Number of Cubes: ${data.cubesCount}`, margin, y);
   y += 14;
-  doc.text(`Target Strength (MPa): ${data.targetStrength}`, margin, y);
+  doc.text(`Concrete Grade: ${data.concreteGrade}`, margin, y);
   y += 20;
 
   doc.setFont("helvetica", "bold");
@@ -838,7 +837,7 @@ function exportCsv() {
     "Slump",
     "AgeDays",
     "CubesCount",
-    "TargetStrength",
+    "concreteGrade",
     "CementKg",
     "WaterKg",
     "FineAggKg",
@@ -871,7 +870,7 @@ function exportCsv() {
       r.slump ?? "",
       r.ageDays ?? "",
       r.cubesCount ?? "",
-      r.targetStrength ?? "",
+      r.concreteGrade ?? "",
       r.cementKg ?? "",
       r.waterKg ?? "",
       r.fineAggKg ?? "",
@@ -1066,6 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
