@@ -459,7 +459,7 @@ function collectFormData() {
     slump: Number(document.getElementById("slump").value || 0),
     ageDays: Number(document.getElementById("ageDays").value || 0),
     cubesCount: Number(document.getElementById("cubesCount").value || 0),
-    targetStrength: document.getElementById("targetStrength").value.trim(),
+    concreteGrade: document.getElementById("concreteGrade").value.trim(),
     notes: document.getElementById("notes").value.trim(),
 
     // Kg inputs
@@ -1065,6 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
