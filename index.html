@@ -62,7 +62,7 @@
               <input
                 type="text"
                 id="organisationType"
-                placeholder="e.g., Construction Company, Consulting Firm"
+                placeholder="e.g. Construction Company, Consulting Firm"
               />
             </label>
 
@@ -77,7 +77,13 @@
               <span class="label-line">
                 Contact Phone Number <span class="required-asterisk">*</span>
               </span>
-              <input type="tel" id="phoneNumber" minlength="11" pattern="\d{11,}" id="phoneNumber" />
+              <input
+                type="tel"
+                id="phoneNumber"
+                placeholder="08012345678"
+                minlength="11"
+                pattern="\d{11,}"
+              />
             </label>
 
             <label>
@@ -87,7 +93,7 @@
               <input
                 type="text"
                 id="projectSite"
-                placeholder="e.g., Lekki Phase 1"
+                placeholder="e.g. Lekki Phase 1"
               />
             </label>
           </div>
@@ -169,8 +175,7 @@
 
             <label>
               <span class="label-line">
-                Concrete Grade
-                <span class="required-asterisk">*</span>
+                Concrete Grade <span class="required-asterisk">*</span>
               </span>
               <input type="text" placeholder="e.g. C25" id="concreteGrade" />
             </label>
@@ -186,65 +191,12 @@
             </label>
           </div>
 
-          <!-- MIX INPUT MODE -->
-          <h4 class="section-title">Mix Input Mode</h4>
-
-          <div class="grid two">
-            <label>
-              <span class="label-line">
-                <input type="radio" name="inputMode" value="kg" id="modeKg" checked />
-                &nbsp; Input Material Quantities in kg/m³
-              </span>
-            </label>
-            <label>
-              <span class="label-line">
-                <input type="radio" name="inputMode" value="ratio" id="modeRatio" />
-                &nbsp; Input Material Quantities in Mix Ratio
-              </span>
-            </label>
-          </div>
-
-          <!-- MATERIAL QUANTITIES (KG/M3) -->
-          <h4 id="kgHeading" class="section-title">Material Quantities – Kg/m³</h4>
-
-          <div id="kgInputs">
-            <div class="grid two">
-              <label>
-                <span class="label-line">
-                  Cement (kg/m³) <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.1" id="cementKg" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Water (kg/m³) <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.1" id="waterKg" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Fine Aggregate (kg/m³) <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.1" id="fineAggKg" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Coarse Aggregate (kg/m³) <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.1" id="coarseAggKg" />
-              </label>
-            </div>
-          </div>
-
-          <!-- MATERIAL QUANTITIES (RATIOS) -->
-          <h4 id="ratioHeading" class="section-title" style="display:none;">
+          <!-- MATERIAL QUANTITIES (RATIO MODE ONLY) -->
+          <h4 id="ratioHeading" class="section-title">
             Mix (Cement : Fine : Coarse) &amp; W/C Ratio
           </h4>
 
-          <div id="ratioInputs" style="display: none;">
+          <div id="ratioInputs">
             <!-- One-line Cement : Fine : Coarse -->
             <div class="ratio-line">
               <label>
@@ -368,7 +320,6 @@
             <thead>
               <tr>
                 <th>App No</th>
-                <th>Mode</th>
                 <th>Client / Company</th>
                 <th>Type</th>
                 <th>W/C</th>
@@ -376,7 +327,7 @@
               </tr>
             </thead>
             <tbody id="mixes-table-body">
-              <tr><td colspan="6" class="no-data">No mixes saved yet.</td></tr>
+              <tr><td colspan="5" class="no-data">No mixes saved yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -388,18 +339,3 @@
   </main>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
