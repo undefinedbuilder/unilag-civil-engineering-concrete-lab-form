@@ -373,7 +373,7 @@ export default async function handler(req, res) {
      C: Client Name
      E: Index
      F: Admixture Name
-     G: Dosage (L/100kg)
+     G: Dosage (%)
   ------------------------------------------------------------ */
   if (Array.isArray(admixtures) && admixtures.length > 0) {
     const admRows = admixtures.map((a, index) => [
@@ -447,3 +447,4 @@ export default async function handler(req, res) {
     mixRatioString,
   });
 }
+
