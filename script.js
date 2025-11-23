@@ -117,10 +117,11 @@ function createScmRow(data = {}) {
 function toggleDerivedBoxes(show) {
   const wcBox = document.getElementById("wcratio-box");
   const mixBox = document.getElementById("mixratio-box");
+  if (!wcBox || !mixBox) return;
+
   const boxes = [wcBox, mixBox];
 
   boxes.forEach((box) => {
-    if (!box) return;
     if (show) {
       box.classList.add("is-visible");
     } else {
@@ -1065,6 +1066,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
 
