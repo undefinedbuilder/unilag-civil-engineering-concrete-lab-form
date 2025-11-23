@@ -562,7 +562,8 @@ async function generatePDF(data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "pt", format: "A4" });
 
-  const pageW = 595;
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 32;
   let y = 40;
 
@@ -571,6 +572,7 @@ async function generatePDF(data) {
     doc.addImage(logoImageDataUrl, "PNG", margin, y, 60, 60);
   }
 
+  // Header
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("CONCRETE LABORATORY – UNIVERSITY OF LAGOS", margin + 80, y + 20);
@@ -578,64 +580,80 @@ async function generatePDF(data) {
   doc.text("Client's Cube Test Intake Form", margin + 80, y + 38);
   y += 80;
 
+  // Application No.
   if (data.recordId) {
     doc.setFont("helvetica", "bold");
     doc.text(`Application No: ${data.recordId}`, margin, y);
     y += 18;
   }
 
+  // Client details
   doc.setFont("helvetica", "bold");
   doc.text("Client Details", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
-  doc.text(`Client Name: ${data.clientName}`, margin, y);
+  doc.text(`Client Name: ${data.clientName || ""}`, margin, y);
   y += 14;
-  doc.text(`Contact Email: ${data.contactEmail}`, margin, y);
+  doc.text(`Contact Email: ${data.contactEmail || ""}`, margin, y);
   y += 14;
-  doc.text(`Contact Phone: ${data.phoneNumber}`, margin, y);
+  doc.text(`Contact Phone: ${data.phoneNumber || ""}`, margin, y);
   y += 14;
-  doc.text(`Organisation Type: ${data.organisationType}`, margin, y);
+  doc.text(`Organisation Type: ${data.organisationType || ""}`, margin, y);
   y += 14;
-  doc.text(`Contact Person: ${data.contactPerson}`, margin, y);
+  doc.text(`Contact Person: ${data.contactPerson || ""}`, margin, y);
   y += 14;
-  doc.text(`Project / Site: ${data.projectSite}`, margin, y);
+  doc.text(`Project / Site: ${data.projectSite || ""}`, margin, y);
   y += 20;
 
+  // Test information
   doc.setFont("helvetica", "bold");
   doc.text("Test Information", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
-  doc.text(`Crushing Date: ${data.crushDate}`, margin, y);
+  doc.text(`Crushing Date: ${data.crushDate || ""}`, margin, y);
   y += 14;
-  doc.text(`Concrete Type: ${data.concreteType}`, margin, y);
+  doc.text(`Concrete Type: ${data.concreteType || ""}`, margin, y);
   y += 14;
-  doc.text(`Cement Type: ${data.cementType}`, margin, y);
+  doc.text(`Cement Type: ${data.cementType || ""}`, margin, y);
   y += 14;
-  doc.text(`Slump (mm): ${data.slump}`, margin, y);
+  doc.text(`Slump (mm): ${data.slump ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Age at Testing (days): ${data.ageDays}`, margin, y);
+  doc.text(`Age at Testing (days): ${data.ageDays ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Number of Cubes: ${data.cubesCount}`, margin, y);
+  doc.text(`Number of Cubes: ${data.cubesCount ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Concrete Grade: ${data.concreteGrade}`, margin, y);
+  doc.text(`Concrete Grade: ${data.concreteGrade ?? ""}`, margin, y);
   y += 20;
 
+  // Mix information – ratio only
   doc.setFont("helvetica", "bold");
   doc.text("Material Quantities (Mix Ratio & W/C)", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
 
-  doc.text(`Cement : ${data.ratioCement}`, margin, y);
+  doc.text(`Cement (part): ${data.ratioCement ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Fine Aggregate: ${data.ratioFine}`, margin, y);
+  doc.text(`Fine Aggregate (part): ${data.ratioFine ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Coarse Aggregate : ${data.ratioCoarse}`, margin, y);
+  doc.text(`Coarse Aggregate (part): ${data.ratioCoarse ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio}`, margin, y);
+  doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`, margin, y);
   y += 14;
-  doc.text(`Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`, margin, y);
+
+  const wcRatioText =
+    typeof data.wcRatio === "number" && !isNaN(data.wcRatio)
+      ? data.wcRatio.toFixed(2)
+      : (data.wcRatio || "");
+  doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y);
+  y += 14;
+  doc.text(
+    `Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`,
+    margin,
+    y
+  );
   y += 20;
 
+  // Admixtures
   doc.setFont("helvetica", "bold");
   doc.text("Admixtures", margin, y);
   y += 16;
@@ -655,6 +673,7 @@ async function generatePDF(data) {
   }
   y += 20;
 
+  // SCMs
   doc.setFont("helvetica", "bold");
   doc.text("SCMs", margin, y);
   y += 16;
@@ -670,6 +689,7 @@ async function generatePDF(data) {
   }
   y += 20;
 
+  // Notes
   doc.setFont("helvetica", "bold");
   doc.text("Notes", margin, y);
   y += 16;
@@ -680,13 +700,7 @@ async function generatePDF(data) {
   );
   doc.text(notesLines, margin, y);
 
-  const filename = `${sanitizeFilename(
-    data.clientName || "Client"
-  )}_${sanitizeFilename(data.projectSite || "CubeTest")}.pdf`;
-  doc.save(filename);
-}
-
- // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
+  // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
   const boxHeight = 110;
   const boxWidth = pageW - margin * 2;
   const copyrightGap = 20;
@@ -981,3 +995,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
