@@ -323,21 +323,18 @@ input[type="radio"] {
   line-height: 1;
 }
 
-/* On very small screens, allow labels to stack but keep ":" visible */
 @media (max-width: 480px) {
   .ratio-line {
     gap: 4px;
   }
 }
 
-/* W/C row under the ratio line – full width */
-
-.ratio-water-row {
+.wc-input-line {
   margin-top: 4px;
   width: 100%;
 }
 
-.ratio-water-row label {
+.wc-input-line label {
   width: 100%;
 }
 
@@ -564,3 +561,4 @@ tbody tr:hover {
 .small-note {
   margin-top: 6px;
 }
+
