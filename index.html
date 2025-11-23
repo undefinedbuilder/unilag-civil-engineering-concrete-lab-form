@@ -200,7 +200,7 @@
             <label>
               <span class="label-line">
                 <input type="radio" name="inputMode" value="ratio" id="modeRatio" />
-                &nbsp; Input Material Quantities in Ratios
+                &nbsp; Input Mix as Ratios &amp; W/C
               </span>
             </label>
           </div>
@@ -214,90 +214,111 @@
                 <span class="label-line">
                   Cement (kg/m³) <span class="required-asterisk">*</span>
                 </span>
-                <input type="number" min="0" step="0.1" id="cementContent" />
+                <input type="number" min="0" step="0.1" id="cementKg" />
               </label>
 
               <label>
                 <span class="label-line">
                   Water (kg/m³) <span class="required-asterisk">*</span>
                 </span>
-                <input type="number" min="0" step="0.1" id="waterContent" />
+                <input type="number" min="0" step="0.1" id="waterKg" />
               </label>
 
               <label>
                 <span class="label-line">
-                  Fine Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                  Fine Aggregate (Sand) (kg/m³) <span class="required-asterisk">*</span>
                 </span>
-                <input type="number" min="0" step="0.1" id="fineAgg" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Medium Aggregate (kg/m³) <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.1" id="mediumAgg" />
+                <input type="number" min="0" step="0.1" id="fineAggKg" />
               </label>
 
               <label>
                 <span class="label-line">
                   Coarse Aggregate (kg/m³) <span class="required-asterisk">*</span>
                 </span>
-                <input type="number" min="0" step="0.1" id="coarseAgg" />
+                <input type="number" min="0" step="0.1" id="coarseAggKg" />
               </label>
             </div>
           </div>
 
           <!-- MATERIAL QUANTITIES (RATIOS) -->
-          <h4 id="ratioHeading" class="section-title">Material Quantities – Ratios (by Cement)</h4>
+          <h4 id="ratioHeading" class="section-title" style="display:none;">
+            Mix Ratio (Cement : Fine : Coarse) &amp; W/C
+          </h4>
 
           <div id="ratioInputs" style="display: none;">
+            <!-- One-line Cement : Fine : Coarse -->
+            <div class="ratio-line">
+              <label>
+                <span class="label-line">
+                  Cement (Part) <span class="required-asterisk">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  id="ratioCement"
+                  value="1"
+                  readonly
+                />
+              </label>
+
+              <span class="ratio-separator">:</span>
+
+              <label>
+                <span class="label-line">
+                  Fine Aggregate (Sand) – Part(s)
+                  <span class="required-asterisk">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  id="ratioFine"
+                />
+              </label>
+
+              <span class="ratio-separator">:</span>
+
+              <label>
+                <span class="label-line">
+                  Coarse Aggregate – Part(s)
+                  <span class="required-asterisk">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  id="ratioCoarse"
+                />
+              </label>
+            </div>
+
             <div class="grid two">
               <label>
                 <span class="label-line">
-                  Cement <span class="required-asterisk">*</span>
+                  Water–Cement Ratio (W/C)
+                  <span class="required-asterisk">*</span>
                 </span>
-                <input type="number" min="0" step="0.01" id="ratioCement" value="1" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Fine Aggregate <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.01" id="ratioFine" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Medium Aggregate <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.01" id="ratioMedium" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Coarse Aggregate <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.01" id="ratioCoarse" />
-              </label>
-
-              <label>
-                <span class="label-line">
-                  Water <span class="required-asterisk">*</span>
-                </span>
-                <input type="number" min="0" step="0.01" id="ratioWater" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  id="waterCementRatio"
+                  placeholder="e.g. 0.50"
+                />
               </label>
             </div>
           </div>
 
-          <!-- W/C & MIX RATIO -->
+          <!-- DERIVED W/C & MIX RATIO -->
           <div id="wcratio-box" class="wc-box" style="display:none;">
-              <strong>Water–Cement Ratio (from kg/m³):</strong>
-              <span id="wcRatioValue">0.00</span>
+            <strong>Water–Cement Ratio (derived):</strong>
+            <span id="wcRatioValue">0.00</span>
           </div>
 
           <div id="mixratio-box" class="wc-box" style="display:none;">
-              <strong>Normalized Mix Ratio (by cement, from kg/m³):</strong>
-              <span id="mixRatioValue">–</span>
+            <strong>Normalized Mix Ratio (Cement : Fine : Coarse):</strong>
+            <span id="mixRatioValue">–</span>
           </div>
 
           <!-- CHEMICAL ADMIXTURES -->
@@ -365,44 +386,6 @@
         </p>
       </section>
     </div>
-
-    <!-- APPLICATION NUMBER MODAL -->
-    <div
-      id="appModal"
-      class="modal hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modalTitle"
-    >
-      <div class="modal-card research">
-        <div class="modal-header">
-          <h4 id="modalTitle">Application Number</h4>
-          <button id="modalClose" type="button" class="modal-x" aria-label="Close dialog">
-            ×
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-number" id="modalNumber">UNILAG-CL-K000001</div>
-          <div class="modal-note">
-            Please keep this number safe and quote it in all discussions with the Concrete Laboratory.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-      © <span id="year"></span> Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
-    </footer>
   </main>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
