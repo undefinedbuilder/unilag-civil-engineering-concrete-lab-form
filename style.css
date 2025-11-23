@@ -274,10 +274,35 @@ input[type="radio"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  /* animation baseline */
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  max-height: 120px;
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out,
+    max-height 0.18s ease-out,
+    margin-top 0.18s ease-out,
+    padding-top 0.18s ease-out,
+    padding-bottom 0.18s ease-out,
+    border-width 0.18s ease-out;
 }
 
 .wc-box strong {
   font-weight: 600;
+}
+
+.wc-box.is-hidden {
+  opacity: 0;
+  transform: scale(0.97) translateY(4px);
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 #wcRatioValue,
@@ -306,6 +331,25 @@ input[type="radio"] {
   padding: 0 4px 10px;
   font-weight: 700;
   font-size: 1rem;
+}
+
+.ratio-wc-full {
+  margin-top: 4px;
+}
+
+.ratio-wc-full label {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .ratio-line {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ratio-separator {
+    display: none;
+  }
 }
 
 /* ==============================
