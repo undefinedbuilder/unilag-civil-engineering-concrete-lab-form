@@ -593,6 +593,70 @@ tbody tr:hover {
   margin-top: 6px;
 }
 
+/* ==============================
+   APPLICATION NUMBER MODAL
+   ============================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay.is-open {
+  display: flex;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border-radius: 22px;
+  padding: 22px 24px 20px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  text-align: center;
+}
+
+.modal-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--unilag-green-dark);
+}
+
+.modal-text {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.modal-appno {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(120deg, var(--unilag-green) 0%, #005885 100%);
+  color: #f9fafb;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 0.86rem;
+}
+
+.modal-subtext {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ==============================
+   FOOTER
+   ============================== */
 footer {
   text-align: center;
   font-size: 0.78rem;
@@ -600,3 +664,4 @@ footer {
   margin: 20px auto 40px;
   padding: 10px;
 }
+
