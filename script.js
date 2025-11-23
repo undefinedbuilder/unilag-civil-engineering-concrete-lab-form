@@ -109,20 +109,24 @@ function createScmRow(data = {}) {
 
 /* ---------- Derived Mix Calculations ---------- */
 
-function toggleDerivedBoxes(show) {
+function setWcBoxVisible(show) {
   const wcBox = document.getElementById("wcratio-box");
+  if (!wcBox) return;
+  if (show) {
+    wcBox.classList.add("is-visible");
+  } else {
+    wcBox.classList.remove("is-visible");
+  }
+}
+
+function setMixBoxVisible(show) {
   const mixBox = document.getElementById("mixratio-box");
-  if (!wcBox || !mixBox) return;
-
-  const boxes = [wcBox, mixBox];
-
-  boxes.forEach((box) => {
-    if (show) {
-      box.classList.add("is-visible");
-    } else {
-      box.classList.remove("is-visible");
-    }
-  });
+  if (!mixBox) return;
+  if (show) {
+    mixBox.classList.add("is-visible");
+  } else {
+    mixBox.classList.remove("is-visible");
+  }
 }
 
 /**
@@ -153,45 +157,57 @@ function updateDerivedMixValues() {
   const wcSpan = document.getElementById("wcRatioValue");
   const mixSpan = document.getElementById("mixRatioValue");
 
-  function clearDerived() {
-    if (wcSpan) wcSpan.textContent = "";
-    if (mixSpan) mixSpan.textContent = "";
-    toggleDerivedBoxes(false);
-    return { wcRatio: null, mixRatioString: "" };
-  }
-
   const ratioCEl = document.getElementById("ratioCement");
   const ratioFEl = document.getElementById("ratioFine");
   const ratioCoEl = document.getElementById("ratioCoarse");
   const wOverCEl = document.getElementById("waterCementRatio");
 
+  // If any of the elements are missing, hide both and stop.
   if (!ratioCEl || !ratioFEl || !ratioCoEl || !wOverCEl) {
-    return clearDerived();
+    if (wcSpan) wcSpan.textContent = "";
+    if (mixSpan) mixSpan.textContent = "";
+    setWcBoxVisible(false);
+    setMixBoxVisible(false);
+    return { wcRatio: null, mixRatioString: "" };
   }
 
-  const vals = [ratioCEl, ratioFEl, ratioCoEl, wOverCEl].map((el) =>
-    String(el.value).trim()
-  );
+  const cVal = String(ratioCEl.value).trim();
+  const fVal = String(ratioFEl.value).trim();
+  const coVal = String(ratioCoEl.value).trim();
+  const wVal = String(wOverCEl.value).trim();
 
-  const allFilled = vals.every((v) => v !== "");
-  if (!allFilled) {
-    return clearDerived();
+  const cNum = Number(cVal || "1");
+  const fNum = Number(fVal);
+  const coNum = Number(coVal);
+  const wNum = Number(wVal);
+
+  // --- MIX RATIO: show when Cement, Fine, Coarse are filled ---
+
+  const mixInputsFilled = cVal !== "" && fVal !== "" && coVal !== "";
+
+  if (mixInputsFilled && cNum > 0 && !isNaN(fNum) && !isNaN(coNum)) {
+    mixRatioString = `1 : ${(fNum / cNum).toFixed(2)} : ${(coNum / cNum).toFixed(2)}`;
+    if (mixSpan) mixSpan.textContent = mixRatioString;
+    setMixBoxVisible(true);
+  } else {
+    mixRatioString = "";
+    if (mixSpan) mixSpan.textContent = "";
+    setMixBoxVisible(false);
   }
 
-  ({ wcRatio, mixRatioString } = computeDerivedFromRatio(
-    vals[0],
-    vals[1],
-    vals[2],
-    vals[3]
-  ));
+  // --- WATER–CEMENT RATIO: show when W/C input is filled ---
 
-  if (wcRatio === null || !mixRatioString) {
-    return clearDerived();
+  const wcInputFilled = wVal !== "";
+
+  if (wcInputFilled && !isNaN(wNum)) {
+    wcRatio = wNum;
+    if (wcSpan) wcSpan.textContent = wcRatio.toFixed(2);
+    setWcBoxVisible(true);
+  } else {
+    wcRatio = null;
+    if (wcSpan) wcSpan.textContent = "";
+    setWcBoxVisible(false);
   }
-
-  if (wcSpan) wcSpan.textContent = wcRatio.toFixed(2);
-  if (mixSpan) mixSpan.textContent = mixRatioString;
-  toggleDerivedBoxes(true); // animated show via CSS
 
   return { wcRatio, mixRatioString };
 }
@@ -558,166 +574,33 @@ function loadRecordIntoForm(r) {
 
 /* ---------- PDF Generation ---------- */
 
-async function generatePDF(data) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "A4" });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 32;
-  let y = 40;
-
-  // Logo
-  if (logoImageDataUrl) {
-    doc.addImage(logoImageDataUrl, "PNG", margin, y, 60, 60);
-  }
-
-  // Header
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("CONCRETE LABORATORY – UNIVERSITY OF LAGOS", margin + 80, y + 20);
-  doc.setFontSize(10);
-  doc.text("Client's Cube Test Intake Form", margin + 80, y + 38);
-  y += 80;
-
-  // Application No.
-  if (data.recordId) {
-    doc.setFont("helvetica", "bold");
-    doc.text(`Application No: ${data.recordId}`, margin, y);
-    y += 18;
-  }
-
-  // Client details
-  doc.setFont("helvetica", "bold");
-  doc.text("Client Details", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Client Name: ${data.clientName || ""}`, margin, y);
-  y += 14;
-  doc.text(`Contact Email: ${data.contactEmail || ""}`, margin, y);
-  y += 14;
-  doc.text(`Contact Phone: ${data.phoneNumber || ""}`, margin, y);
-  y += 14;
-  doc.text(`Organisation Type: ${data.organisationType || ""}`, margin, y);
-  y += 14;
-  doc.text(`Contact Person: ${data.contactPerson || ""}`, margin, y);
-  y += 14;
-  doc.text(`Project / Site: ${data.projectSite || ""}`, margin, y);
-  y += 20;
-
-  // Test information
-  doc.setFont("helvetica", "bold");
-  doc.text("Test Information", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Crushing Date: ${data.crushDate || ""}`, margin, y);
-  y += 14;
-  doc.text(`Concrete Type: ${data.concreteType || ""}`, margin, y);
-  y += 14;
-  doc.text(`Cement Type: ${data.cementType || ""}`, margin, y);
-  y += 14;
-  doc.text(`Slump (mm): ${data.slump ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Age at Testing (days): ${data.ageDays ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Number of Cubes: ${data.cubesCount ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Concrete Grade: ${data.concreteGrade ?? ""}`, margin, y);
-  y += 20;
-
-  // Mix information – ratio only
-  doc.setFont("helvetica", "bold");
-  doc.text("Material Quantities (Mix Ratio & W/C)", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-
-  doc.text(`Cement (part): ${data.ratioCement ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Fine Aggregate (part): ${data.ratioFine ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Coarse Aggregate (part): ${data.ratioCoarse ?? ""}`, margin, y);
-  y += 14;
-  doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`, margin, y);
-  y += 14;
-  doc.text(
-    `Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`,
-    margin,
-    y
-  );
-  y += 20;
-
-  // Admixtures
-  doc.setFont("helvetica", "bold");
-  doc.text("Admixtures", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  if (data.admixtures && data.admixtures.length) {
-    data.admixtures.forEach((a, i) => {
-      doc.text(
-        `${i + 1}. ${a.name || ""} | ${a.dosage || ""} %`,
-        margin,
-        y
-      );
-      y += 14;
-    });
-  } else {
-    doc.text("None", margin, y);
-    y += 14;
-  }
-  y += 20;
-
-  // SCMs
-  doc.setFont("helvetica", "bold");
-  doc.text("SCMs", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  if (data.scms && data.scms.length) {
-    data.scms.forEach((s, i) => {
-      doc.text(`${i + 1}. ${s.name || ""} | ${s.percent || ""}%`, margin, y);
-      y += 14;
-    });
-  } else {
-    doc.text("None", margin, y);
-    y += 14;
-  }
-  y += 20;
-
-  // Notes
-  doc.setFont("helvetica", "bold");
-  doc.text("Notes", margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  const notesLines = doc.splitTextToSize(
-    data.notes || "",
-    pageW - margin * 2
-  );
-  doc.text(notesLines, margin, y);
-
 // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
-const boxHeight = 120;
 const boxWidth = pageW - margin * 2;
-const copyrightGap = 20;
+const copyrightGap = 24;
+const boxHeight = 140; // a bit taller so it visually fills better
 const boxX = margin;
 const boxY = pageH - margin - boxHeight - copyrightGap;
 
-// Draw outer box
+// Draw outer box full between the margins
 doc.setDrawColor(0);
 doc.rect(boxX, boxY, boxWidth, boxHeight);
 
 // Inner layout
-const innerMargin = 10;
-let boxInnerY = boxY + 16;
+const innerMargin = 12;
+let boxInnerY = boxY + 20;
 
 doc.setFont("helvetica", "bold");
 doc.setFontSize(10);
+// Title aligned to left inside box
 doc.text("FOR OFFICE USE ONLY", boxX + innerMargin, boxInnerY);
-boxInnerY += 14;
 
+boxInnerY += 22;
 doc.setFont("helvetica", "normal");
 doc.setFontSize(9);
 
+// Row 1: Tested by / Date – spaced horizontally
 doc.text(
-  "Tested by: ____________________________",
+  "Tested by: ________________________________",
   boxX + innerMargin,
   boxInnerY
 );
@@ -726,43 +609,37 @@ doc.text(
   boxX + boxWidth / 2,
   boxInnerY
 );
-boxInnerY += 14;
 
-doc.text(
-  "Checked by: __________________________",
-  boxX + innerMargin,
-  boxInnerY
-);
-doc.text(
-  "Date: ________________",
-  boxX + boxWidth / 2,
-  boxInnerY
-);
-boxInnerY += 14;
+boxInnerY += 22;
 
+// Row 2: Compressive Strength
 doc.text(
   "Compressive Strength (MPa): ________________________________",
   boxX + innerMargin,
   boxInnerY
 );
-boxInnerY += 14;
 
+boxInnerY += 22;
+
+// Row 3 & 4: Remarks (two lines, with space to breathe)
 doc.text(
   "Remarks:",
   boxX + innerMargin,
   boxInnerY
 );
-boxInnerY += 12;
+
+boxInnerY += 18;
 
 doc.text(
-  "___________________________________________________________",
+  "______________________________________________________________",
   boxX + innerMargin,
   boxInnerY
 );
-boxInnerY += 12;
+
+boxInnerY += 18;
 
 doc.text(
-  "___________________________________________________________",
+  "______________________________________________________________",
   boxX + innerMargin,
   boxInnerY
 );
@@ -945,7 +822,14 @@ function resetForm() {
 /* ---------- Event Wiring ---------- */
 
 function attachEventListeners() {
-  const form = document.getElementById("mix-form");
+  const concreteGradeInput = document.getElementById("concreteGrade");
+  if (concreteGradeInput) {
+     concreteGradeInput.addEventListener("input", () => {
+       concreteGradeInput.value = concreteGradeInput.value.toUpperCase();
+     });
+  }
+
+   const form = document.getElementById("mix-form");
   if (form) {
     form.addEventListener("submit", submitForm);
   }
@@ -1022,5 +906,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
 
