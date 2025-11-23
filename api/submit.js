@@ -90,8 +90,7 @@ export default async function handler(req, res) {
     "slump",
     "ageDays",
     "cubesCount",
-    "targetStrength",
-    "notes",
+    "concreteGrade",
   ];
 
   for (const key of commonRequired) {
@@ -158,7 +157,7 @@ export default async function handler(req, res) {
     slump,
     ageDays,
     cubesCount,
-    targetStrength,
+    concreteGrade,
     notes,
 
     // Kg inputs
@@ -269,7 +268,7 @@ export default async function handler(req, res) {
      L: Slump (mm)
      M: Age (days)
      N: Cubes Count
-     O: Target Strength (MPa)
+     O: Concrete Grade
      Then mode-specific columns, plus:
      - Derived W/C Ratio
      - Mix Ratio (string)
@@ -302,7 +301,7 @@ export default async function handler(req, res) {
         slump,
         ageDays,
         cubesCount,
-        targetStrength,
+        concreteGrade,
         cementKg,
         waterKg,
         fineAggKg,
@@ -334,7 +333,7 @@ export default async function handler(req, res) {
         slump,
         ageDays,
         cubesCount,
-        targetStrength,
+        concreteGrade,
         ratioCement,
         ratioFine,
         ratioCoarse,
@@ -443,5 +442,6 @@ export default async function handler(req, res) {
     mixRatioString,
   });
 }
+
 
 
