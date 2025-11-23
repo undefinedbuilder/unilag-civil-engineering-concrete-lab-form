@@ -288,6 +288,27 @@ input[type="radio"] {
 }
 
 /* ==============================
+   RATIO LINE (Cement : Fine : Coarse)
+   ============================== */
+
+.ratio-line {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+
+.ratio-line label {
+  flex: 1;
+}
+
+.ratio-separator {
+  padding: 0 4px 10px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* ==============================
    DYNAMIC GROUPS
    ============================== */
 
@@ -400,8 +421,6 @@ button {
   background: #f3f4f6;
 }
 
-/* Actions row */
-
 .actions.two-cols {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -435,7 +454,6 @@ button {
   border: 1px dashed transparent;
 }
 
-/* simple colour states */
 .status-info {
   background: #eff6ff;
   border-color: rgba(59, 130, 246, 0.6);
@@ -512,129 +530,4 @@ tbody tr:hover {
 
 .small-note {
   margin-top: 6px;
-}
-
-/* ==============================
-   MODAL (APPLICATION NUMBER)
-   ============================== */
-
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-}
-
-.modal.hidden {
-  display: none;
-}
-
-.modal-card {
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
-  width: min(380px, 92vw);
-  padding: 14px 16px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-.modal-card.research {
-  border-top: 4px solid var(--unilag-green);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.modal-header h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.modal-x {
-  border-radius: 999px;
-  border: none;
-  background: #f3f4f6;
-  width: 26px;
-  height: 26px;
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.modal-x:hover {
-  background: #e5e7eb;
-}
-
-.modal-body {
-  font-size: 0.85rem;
-}
-
-.modal-number {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-size: 0.95rem;
-  background: #0f172a;
-  color: #f9fafb;
-  text-align: center;
-  padding: 7px 10px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  letter-spacing: 0.12em;
-}
-
-.modal-note {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* ==============================
-   FOOTER
-   ============================== */
-
-.footer {
-  margin-top: 20px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-/* ==============================
-   RESPONSIVE TWEAKS
-   ============================== */
-
-@media (max-width: 700px) {
-  .header {
-    text-align: left;
-  }
-
-  .logo {
-    width: 74px;
-    margin-bottom: 4px;
-  }
-
-  .grid.two {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .actions.two-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .card {
-    padding-inline: 14px;
-  }
-
-  .dynamic-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
 }
