@@ -18,7 +18,12 @@ function nextRecordId(lastId) {
 /* ---------------------------------------------------------------
    HELPER: DERIVED VALUES FROM RATIO INPUTS
 ---------------------------------------------------------------- */
-function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCementRatio) {
+function computeDerivedFromRatio(
+  ratioCement,
+  ratioFine,
+  ratioCoarse,
+  waterCementRatio
+) {
   const c = Number(ratioCement);
   const f = Number(ratioFine);
   const co = Number(ratioCoarse);
@@ -28,13 +33,13 @@ function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCemen
     return { wcRatio: 0, mixRatioString: "" };
   }
 
-  const wcRatio = wOverC;
+  const wcRatio = wOverC; // in ratio mode, waterCementRatio *is* W/C
   const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
   return { wcRatio, mixRatioString };
 }
 
 /* ---------------------------------------------------------------
-   MAIN API HANDLER – /api/submit  (RATIO-ONLY)
+   MAIN API HANDLER – /api/submit
 ---------------------------------------------------------------- */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -47,7 +52,7 @@ export default async function handler(req, res) {
   const body = req.body || {};
 
   /* -----------------------------------------------------------
-      BASIC VALIDATION – COMMON FIELDS (NOTES OPTIONAL)
+      BASIC VALIDATION – COMMON FIELDS
      ------------------------------------------------------------ */
   const commonRequired = [
     "clientName",
@@ -149,9 +154,8 @@ export default async function handler(req, res) {
 
   const sheets = google.sheets({ version: "v4", auth });
 
-  // RATIO-ONLY: always use R + "Client Sheet (Ratios)"
-  const modeLetter = "R";
-  const mainSheetName = "Client Sheet (Ratios)";
+  // RATIO-ONLY: save everything to "Client Master Sheet"
+  const mainSheetName = "Client Master Sheet";
 
   /* -----------------------------------------------------------
       FETCH LAST APPLICATION NUMBER FROM COLUMN A
@@ -180,7 +184,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const recordId = nextRecordId(lastId, modeLetter);
+  const recordId = nextRecordId(lastId);
   const timestamp = new Date().toISOString();
 
   /* -----------------------------------------------------------
@@ -194,7 +198,8 @@ export default async function handler(req, res) {
   );
 
   /* -----------------------------------------------------------
-      BUILD MAIN ROW (RATIO SHEET)
+      BUILD MAIN ROW
+      (Adjust to match the header of "Client Master Sheet")
       A: Record ID
       B: Timestamp
       C: Client / Company Name
@@ -330,7 +335,7 @@ export default async function handler(req, res) {
   }
 
   /* -----------------------------------------------------------
-      SUCCESS RESPONSE (INCLUDES DERIVED VALUES)
+      SUCCESS RESPONSE
      ------------------------------------------------------------ */
   return res.status(200).json({
     success: true,
