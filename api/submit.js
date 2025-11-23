@@ -18,54 +18,39 @@ function nextRecordId(lastId, modeLetter) {
 }
 
 /* ---------------------------------------------------------------
-   HELPER: MIX RATIO FROM KG/m³
+   HELPER: DERIVED VALUES FROM Kg INPUTS
 ---------------------------------------------------------------- */
-function computeKgMixRatio(cementContent, waterContent, fineAgg, mediumAgg, coarseAgg) {
-  const cement = Number(cementContent);
-  const water = Number(waterContent);
-  const fine = Number(fineAgg);
-  const medium = Number(mediumAgg);
-  const coarse = Number(coarseAgg);
+function computeDerivedFromKg(cementKg, waterKg, fineAggKg, coarseAggKg) {
+  const c = Number(cementKg);
+  const w = Number(waterKg);
+  const f = Number(fineAggKg);
+  const co = Number(coarseAggKg);
 
-  if (!cement || cement <= 0 || [water, fine, medium, coarse].some((v) => isNaN(v))) {
-    return "";
+  if (!c || c <= 0 || [w, f, co].some((v) => isNaN(v))) {
+    return { wcRatio: 0, mixRatioString: "" };
   }
 
-  const fineRatio = fine / cement;
-  const mediumRatio = medium / cement;
-  const coarseRatio = coarse / cement;
-  const waterRatio = water / cement;
-
-  return `1 : ${fineRatio.toFixed(2)} : ${mediumRatio.toFixed(2)} : ${coarseRatio.toFixed(
-    2
-  )} : ${waterRatio.toFixed(2)}`;
+  const wcRatio = w / c;
+  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
+  return { wcRatio, mixRatioString };
 }
 
 /* ---------------------------------------------------------------
-   HELPER: MIX RATIO FROM "RATIOS"
+   HELPER: DERIVED VALUES FROM RATIO INPUTS
 ---------------------------------------------------------------- */
-function computeRatioMix(ratioCement, ratioFine, ratioMedium, ratioCoarse, ratioWater) {
+function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCementRatio) {
   const c = Number(ratioCement);
   const f = Number(ratioFine);
-  const m = Number(ratioMedium);
   const co = Number(ratioCoarse);
-  const w = Number(ratioWater);
+  const wOverC = Number(waterCementRatio);
 
-  if (!c || c <= 0 || [f, m, co, w].some((v) => isNaN(v))) {
-    return { mixRatioString: "", wcRatio: 0 };
+  if (!c || c <= 0 || [f, co, wOverC].some((v) => isNaN(v))) {
+    return { wcRatio: 0, mixRatioString: "" };
   }
 
-  const fineN = f / c;
-  const mediumN = m / c;
-  const coarseN = co / c;
-  const waterN = w / c;
-  const wcRatio = w / c;
-
-  const mixRatioString = `1 : ${fineN.toFixed(2)} : ${mediumN.toFixed(2)} : ${coarseN.toFixed(
-    2
-  )} : ${waterN.toFixed(2)}`;
-
-  return { mixRatioString, wcRatio };
+  const wcRatio = wOverC;
+  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
+  return { wcRatio, mixRatioString };
 }
 
 /* ---------------------------------------------------------------
@@ -91,7 +76,6 @@ export default async function handler(req, res) {
 
   /* -----------------------------------------------------------
      BASIC VALIDATION – COMMON FIELDS
-     IDs mapped from HTML
   ------------------------------------------------------------ */
   const commonRequired = [
     "clientName",
@@ -124,7 +108,7 @@ export default async function handler(req, res) {
   }
 
   if (inputMode === "kg") {
-    const kgRequired = ["cementContent", "waterContent", "fineAgg", "mediumAgg", "coarseAgg"];
+    const kgRequired = ["cementKg", "waterKg", "fineAggKg", "coarseAggKg"];
     for (const key of kgRequired) {
       if (
         body[key] === undefined ||
@@ -141,9 +125,8 @@ export default async function handler(req, res) {
     const ratioRequired = [
       "ratioCement",
       "ratioFine",
-      "ratioMedium",
       "ratioCoarse",
-      "ratioWater",
+      "waterCementRatio",
     ];
     for (const key of ratioRequired) {
       if (
@@ -177,18 +160,22 @@ export default async function handler(req, res) {
     cubesCount,
     targetStrength,
     notes,
-    cementContent,
-    waterContent,
-    fineAgg,
-    mediumAgg,
-    coarseAgg,
+
+    // Kg inputs
+    cementKg,
+    waterKg,
+    fineAggKg,
+    coarseAggKg,
+
+    // Ratio inputs
     ratioCement,
     ratioFine,
-    ratioMedium,
     ratioCoarse,
-    ratioWater,
-    admixtures,
-    scms,
+    waterCementRatio,
+
+    // Groups
+    admixtures = [],
+    scms = [],
   } = body;
 
   /* -----------------------------------------------------------
@@ -248,39 +235,26 @@ export default async function handler(req, res) {
   /* -----------------------------------------------------------
      DERIVE W/C RATIO + MIX RATIO STRING
   ------------------------------------------------------------ */
-  let wcRatioNumber = 0;
+  let wcRatio = 0;
   let mixRatioString = "";
 
   if (inputMode === "kg") {
-    const cementNum = Number(cementContent);
-    const waterNum = Number(waterContent);
-    if (cementNum && cementNum > 0 && !isNaN(waterNum)) {
-      wcRatioNumber = waterNum / cementNum;
-    } else {
-      wcRatioNumber = 0;
-    }
-    mixRatioString = computeKgMixRatio(
-      cementContent,
-      waterContent,
-      fineAgg,
-      mediumAgg,
-      coarseAgg
-    );
+    const result = computeDerivedFromKg(cementKg, waterKg, fineAggKg, coarseAggKg);
+    wcRatio = result.wcRatio;
+    mixRatioString = result.mixRatioString;
   } else {
-    const ratioResult = computeRatioMix(
+    const result = computeDerivedFromRatio(
       ratioCement,
       ratioFine,
-      ratioMedium,
       ratioCoarse,
-      ratioWater
+      waterCementRatio
     );
-    wcRatioNumber = ratioResult.wcRatio;
-    mixRatioString = ratioResult.mixRatioString;
+    wcRatio = result.wcRatio;
+    mixRatioString = result.mixRatioString;
   }
 
   /* -----------------------------------------------------------
      BUILD MAIN ROW
-     Columns:
      A: Record ID
      B: Timestamp
      C: Client / Company Name
@@ -296,14 +270,22 @@ export default async function handler(req, res) {
      M: Age (days)
      N: Cubes Count
      O: Target Strength (MPa)
-     P–T: Mix inputs (kg or parts)
-     U: W/C Ratio
-     V: Mix Ratio (string)
-     W: Notes
+     Then mode-specific columns, plus:
+     - Derived W/C Ratio
+     - Mix Ratio (string)
+     - Notes
   ------------------------------------------------------------ */
+
   let mainRow;
 
   if (inputMode === "kg") {
+    // P: cementKg
+    // Q: waterKg
+    // R: fineAggKg
+    // S: coarseAggKg
+    // T: wcRatio
+    // U: mixRatioString
+    // V: notes
     mainRow = [
       [
         recordId,
@@ -321,17 +303,23 @@ export default async function handler(req, res) {
         ageDays,
         cubesCount,
         targetStrength,
-        cementContent,
-        waterContent,
-        fineAgg,
-        mediumAgg,
-        coarseAgg,
-        wcRatioNumber,
+        cementKg,
+        waterKg,
+        fineAggKg,
+        coarseAggKg,
+        wcRatio,
         mixRatioString,
         notes,
       ],
     ];
   } else {
+    // P: ratioCement
+    // Q: ratioFine
+    // R: ratioCoarse
+    // S: waterCementRatio (input)
+    // T: wcRatio (derived)
+    // U: mixRatioString
+    // V: notes
     mainRow = [
       [
         recordId,
@@ -351,10 +339,9 @@ export default async function handler(req, res) {
         targetStrength,
         ratioCement,
         ratioFine,
-        ratioMedium,
         ratioCoarse,
-        ratioWater,
-        wcRatioNumber,
+        waterCementRatio,
+        wcRatio,
         mixRatioString,
         notes,
       ],
@@ -367,7 +354,7 @@ export default async function handler(req, res) {
   try {
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `${mainSheetName}!A:W`,
+      range: `${mainSheetName}!A:V`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: mainRow },
     });
@@ -381,11 +368,9 @@ export default async function handler(req, res) {
 
   /* -----------------------------------------------------------
      APPEND ADMIXTURES – SHEET: "Client Admixtures"
-     Columns:
      A: Record ID
      B: Timestamp
      C: Client Name
-     D: Contact Email
      E: Index
      F: Admixture Name
      G: Dosage (L/100kg)
@@ -395,7 +380,6 @@ export default async function handler(req, res) {
       recordId,
       timestamp,
       clientName,
-      contactEmail,
       index + 1,
       a.name || "",
       a.dosage || "",
@@ -419,11 +403,9 @@ export default async function handler(req, res) {
 
   /* -----------------------------------------------------------
      APPEND SCMS – SHEET: "Client SCMs"
-     Columns:
      A: Record ID
      B: Timestamp
      C: Client Name
-     D: Contact Email
      E: Index
      F: SCM Name
      G: Percent (%)
@@ -433,7 +415,6 @@ export default async function handler(req, res) {
       recordId,
       timestamp,
       clientName,
-      contactEmail,
       index + 1,
       s.name || "",
       s.percent || "",
@@ -456,12 +437,13 @@ export default async function handler(req, res) {
   }
 
   /* -----------------------------------------------------------
-     DONE – RETURN TO FRONT-END
+     SUCCESS RESPONSE
   ------------------------------------------------------------ */
   return res.status(200).json({
     success: true,
+    message: "Record saved successfully",
     recordId,
+    wcRatio,
     mixRatioString,
-    wcRatio: wcRatioNumber,
   });
 }
