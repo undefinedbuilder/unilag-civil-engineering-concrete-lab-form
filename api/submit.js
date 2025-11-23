@@ -2,37 +2,17 @@ import { google } from "googleapis";
 
 /* ---------------------------------------------------------------
    HELPER: GENERATE NEXT APPLICATION NUMBER
-   Pattern: UNILAG-CL-K000001 / UNILAG-CL-R000001
 ---------------------------------------------------------------- */
-function nextRecordId(lastId, modeLetter) {
-  if (!lastId) return `UNILAG-CL-${modeLetter}000001`;
+function nextRecordId(lastId) {
+  if (!lastId) return `UNILAG-CL-000001`;
 
-  const match = lastId.match(/^UNILAG-CL-[KR](\d{6})$/);
-  if (!match) return `UNILAG-CL-${modeLetter}000001`;
+  const match = lastId.match(/^UNILAG-CL-(\d{6})$/);
+  if (!match) return `UNILAG-CL-000001`;
 
   let number = parseInt(match[1], 10) + 1;
-  if (number > 999999) {
-    number = 1;
-  }
-  return `UNILAG-CL-${modeLetter}${number.toString().padStart(6, "0")}`;
-}
+  if (number > 999999) number = 1;
 
-/* ---------------------------------------------------------------
-   HELPER: DERIVED VALUES FROM Kg INPUTS
----------------------------------------------------------------- */
-function computeDerivedFromKg(cementKg, waterKg, fineAggKg, coarseAggKg) {
-  const c = Number(cementKg);
-  const w = Number(waterKg);
-  const f = Number(fineAggKg);
-  const co = Number(coarseAggKg);
-
-  if (!c || c <= 0 || [w, f, co].some((v) => isNaN(v))) {
-    return { wcRatio: 0, mixRatioString: "" };
-  }
-
-  const wcRatio = w / c;
-  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
-  return { wcRatio, mixRatioString };
+  return `UNILAG-CL-${number.toString().padStart(6, "0")}`;
 }
 
 /* ---------------------------------------------------------------
@@ -54,7 +34,7 @@ function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCemen
 }
 
 /* ---------------------------------------------------------------
-   MAIN API HANDLER – /api/submit
+   MAIN API HANDLER – /api/submit  (RATIO-ONLY)
 ---------------------------------------------------------------- */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -65,18 +45,10 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
-  const inputMode = body.inputMode; // "kg" or "ratio"
-
-  if (inputMode !== "kg" && inputMode !== "ratio") {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid input mode",
-    });
-  }
 
   /* -----------------------------------------------------------
-     BASIC VALIDATION – COMMON FIELDS
-  ------------------------------------------------------------ */
+      BASIC VALIDATION – COMMON FIELDS (NOTES OPTIONAL)
+     ------------------------------------------------------------ */
   const commonRequired = [
     "clientName",
     "contactEmail",
@@ -106,44 +78,30 @@ export default async function handler(req, res) {
     }
   }
 
-  if (inputMode === "kg") {
-    const kgRequired = ["cementKg", "waterKg", "fineAggKg", "coarseAggKg"];
-    for (const key of kgRequired) {
-      if (
-        body[key] === undefined ||
-        body[key] === null ||
-        String(body[key]).trim?.() === ""
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing required field (kg mode): ${key}`,
-        });
-      }
-    }
-  } else {
-    const ratioRequired = [
-      "ratioCement",
-      "ratioFine",
-      "ratioCoarse",
-      "waterCementRatio",
-    ];
-    for (const key of ratioRequired) {
-      if (
-        body[key] === undefined ||
-        body[key] === null ||
-        String(body[key]).trim?.() === ""
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing required field (ratio mode): ${key}`,
-        });
-      }
+  // Ratio-specific required fields
+  const ratioRequired = [
+    "ratioCement",
+    "ratioFine",
+    "ratioCoarse",
+    "waterCementRatio",
+  ];
+
+  for (const key of ratioRequired) {
+    if (
+      body[key] === undefined ||
+      body[key] === null ||
+      String(body[key]).trim?.() === ""
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required field (ratio): ${key}`,
+      });
     }
   }
 
   /* -----------------------------------------------------------
-     DESTRUCTURE BODY
-  ------------------------------------------------------------ */
+      DESTRUCTURE BODY
+     ------------------------------------------------------------ */
   const {
     clientName,
     contactEmail,
@@ -158,13 +116,7 @@ export default async function handler(req, res) {
     ageDays,
     cubesCount,
     concreteGrade,
-    notes,
-
-    // Kg inputs
-    cementKg,
-    waterKg,
-    fineAggKg,
-    coarseAggKg,
+    notes = "",
 
     // Ratio inputs
     ratioCement,
@@ -178,8 +130,8 @@ export default async function handler(req, res) {
   } = body;
 
   /* -----------------------------------------------------------
-     GOOGLE SHEETS AUTH
-  ------------------------------------------------------------ */
+      GOOGLE SHEETS AUTH
+     ------------------------------------------------------------ */
   const sheetId = process.env.SHEET_ID;
   const credentials = process.env.GOOGLE_SERVICE_CREDENTIALS;
 
@@ -197,14 +149,13 @@ export default async function handler(req, res) {
 
   const sheets = google.sheets({ version: "v4", auth });
 
-  // Separate sheet tabs for kg vs ratio
-  const modeLetter = inputMode === "kg" ? "K" : "R";
-  const mainSheetName =
-    inputMode === "kg" ? "Client Sheet (Kg/m3)" : "Client Sheet (Ratios)";
+  // RATIO-ONLY: always use R + "Client Sheet (Ratios)"
+  const modeLetter = "R";
+  const mainSheetName = "Client Sheet (Ratios)";
 
   /* -----------------------------------------------------------
-     FETCH LAST APPLICATION NUMBER FROM COLUMN A
-  ------------------------------------------------------------ */
+      FETCH LAST APPLICATION NUMBER FROM COLUMN A
+     ------------------------------------------------------------ */
   let lastId = null;
   try {
     const result = await sheets.spreadsheets.values.get({
@@ -214,7 +165,8 @@ export default async function handler(req, res) {
 
     const rows = result.data.values || [];
     for (let i = rows.length - 1; i >= 0; i--) {
-      const cell = rows[i][0];
+      const row = rows[i];
+      const cell = row && row[0];
       if (cell && typeof cell === "string" && cell.trim()) {
         lastId = cell.trim();
         break;
@@ -232,120 +184,66 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   /* -----------------------------------------------------------
-     DERIVE W/C RATIO + MIX RATIO STRING
-  ------------------------------------------------------------ */
-  let wcRatio = 0;
-  let mixRatioString = "";
+      DERIVE W/C RATIO + MIX RATIO STRING (FROM RATIO INPUTS)
+     ------------------------------------------------------------ */
+  const { wcRatio, mixRatioString } = computeDerivedFromRatio(
+    ratioCement,
+    ratioFine,
+    ratioCoarse,
+    waterCementRatio
+  );
 
-  if (inputMode === "kg") {
-    const result = computeDerivedFromKg(cementKg, waterKg, fineAggKg, coarseAggKg);
-    wcRatio = result.wcRatio;
-    mixRatioString = result.mixRatioString;
-  } else {
-    const result = computeDerivedFromRatio(
+  /* -----------------------------------------------------------
+      BUILD MAIN ROW (RATIO SHEET)
+      A: Record ID
+      B: Timestamp
+      C: Client / Company Name
+      D: Contact Email
+      E: Contact Phone
+      F: Organisation Type
+      G: Contact Person
+      H: Project / Site
+      I: Crushing Date
+      J: Concrete Type
+      K: Cement Type
+      L: Slump (mm)
+      M: Age (days)
+      N: Cubes Count
+      O: Concrete Grade
+      P: Ratio Cement
+      Q: Ratio Fine
+      R: Ratio Coarse
+      S: Water–Cement Ratio (input)
+      T: Notes
+     ------------------------------------------------------------ */
+  const mainRow = [
+    [
+      recordId,
+      timestamp,
+      clientName,
+      contactEmail,
+      phoneNumber,
+      organisationType,
+      contactPerson,
+      projectSite,
+      crushDate,
+      concreteType,
+      cementType,
+      slump,
+      ageDays,
+      cubesCount,
+      concreteGrade,
       ratioCement,
       ratioFine,
       ratioCoarse,
-      waterCementRatio
-    );
-    wcRatio = result.wcRatio;
-    mixRatioString = result.mixRatioString;
-  }
+      waterCementRatio,
+      notes,
+    ],
+  ];
 
   /* -----------------------------------------------------------
-     BUILD MAIN ROW
-     A: Record ID
-     B: Timestamp
-     C: Client / Company Name
-     D: Contact Email
-     E: Contact Phone
-     F: Organisation Type
-     G: Contact Person
-     H: Project / Site
-     I: Crushing Date
-     J: Concrete Type
-     K: Cement Type
-     L: Slump (mm)
-     M: Age (days)
-     N: Cubes Count
-     O: Concrete Grade
-     Then mode-specific columns, plus:
-     - Derived W/C Ratio
-     - Mix Ratio (string)
-     - Notes
-  ------------------------------------------------------------ */
-
-  let mainRow;
-
-  if (inputMode === "kg") {
-    // P: cementKg
-    // Q: waterKg
-    // R: fineAggKg
-    // S: coarseAggKg
-    // T: wcRatio
-    // U: mixRatioString
-    // V: notes
-    mainRow = [
-      [
-        recordId,
-        timestamp,
-        clientName,
-        contactEmail,
-        phoneNumber,
-        organisationType,
-        contactPerson,
-        projectSite,
-        crushDate,
-        concreteType,
-        cementType,
-        slump,
-        ageDays,
-        cubesCount,
-        concreteGrade,
-        cementKg,
-        waterKg,
-        fineAggKg,
-        coarseAggKg,
-        wcRatio,
-        mixRatioString,
-        notes,
-      ],
-    ];
-  } else {
-    // P: ratioCement
-    // Q: ratioFine
-    // R: ratioCoarse
-    // S: waterCementRatio (input)
-    // V: notes
-    mainRow = [
-      [
-        recordId,
-        timestamp,
-        clientName,
-        contactEmail,
-        phoneNumber,
-        organisationType,
-        contactPerson,
-        projectSite,
-        crushDate,
-        concreteType,
-        cementType,
-        slump,
-        ageDays,
-        cubesCount,
-        concreteGrade,
-        ratioCement,
-        ratioFine,
-        ratioCoarse,
-        waterCementRatio,
-        notes,
-      ],
-    ];
-  }
-
-  /* -----------------------------------------------------------
-     APPEND MAIN ROW
-  ------------------------------------------------------------ */
+      APPEND MAIN ROW
+     ------------------------------------------------------------ */
   try {
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
@@ -362,14 +260,14 @@ export default async function handler(req, res) {
   }
 
   /* -----------------------------------------------------------
-     APPEND ADMIXTURES – SHEET: "Client Admixtures"
-     A: Record ID
-     B: Timestamp
-     C: Client Name
-     E: Index
-     F: Admixture Name
-     G: Dosage (%)
-  ------------------------------------------------------------ */
+      APPEND ADMIXTURES – SHEET: "Client Admixtures"
+      A: Record ID
+      B: Timestamp
+      C: Client Name
+      D: Index
+      E: Admixture Name
+      F: Dosage (%)
+     ------------------------------------------------------------ */
   if (Array.isArray(admixtures) && admixtures.length > 0) {
     const admRows = admixtures.map((a, index) => [
       recordId,
@@ -383,7 +281,7 @@ export default async function handler(req, res) {
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
-        range: "Client Admixtures!A:G",
+        range: "Client Admixtures!A:F",
         valueInputOption: "USER_ENTERED",
         requestBody: { values: admRows },
       });
@@ -397,14 +295,14 @@ export default async function handler(req, res) {
   }
 
   /* -----------------------------------------------------------
-     APPEND SCMS – SHEET: "Client SCMs"
-     A: Record ID
-     B: Timestamp
-     C: Client Name
-     E: Index
-     F: SCM Name
-     G: Percent (%)
-  ------------------------------------------------------------ */
+      APPEND SCMS – SHEET: "Client SCMs"
+      A: Record ID
+      B: Timestamp
+      C: Client Name
+      D: Index
+      E: SCM Name
+      F: Percent (%)
+     ------------------------------------------------------------ */
   if (Array.isArray(scms) && scms.length > 0) {
     const scmRows = scms.map((s, index) => [
       recordId,
@@ -418,7 +316,7 @@ export default async function handler(req, res) {
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
-        range: "Client SCMs!A:G",
+        range: "Client SCMs!A:F",
         valueInputOption: "USER_ENTERED",
         requestBody: { values: scmRows },
       });
@@ -432,8 +330,8 @@ export default async function handler(req, res) {
   }
 
   /* -----------------------------------------------------------
-     SUCCESS RESPONSE
-  ------------------------------------------------------------ */
+      SUCCESS RESPONSE (INCLUDES DERIVED VALUES)
+     ------------------------------------------------------------ */
   return res.status(200).json({
     success: true,
     message: "Record saved successfully",
@@ -442,6 +340,3 @@ export default async function handler(req, res) {
     mixRatioString,
   });
 }
-
-
-
