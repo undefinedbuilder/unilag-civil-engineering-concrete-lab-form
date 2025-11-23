@@ -298,6 +298,20 @@ input[type="radio"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  opacity: 0;
+  transform: translateY(4px);
+  max-height: 0;
+  overflow: hidden;
+  transition:
+  opacity 0.25s ease,
+  transform 0.25s ease,
+  max-height 0.25s ease;
+}
+
+.wc-box.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 80px;
 }
 
 .wc-box strong {
@@ -573,3 +587,4 @@ tbody tr:hover {
 .small-note {
   margin-top: 6px;
 }
+
