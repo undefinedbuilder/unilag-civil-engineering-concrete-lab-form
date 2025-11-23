@@ -53,6 +53,25 @@ function setDateToToday(inputEl) {
   inputEl.value = todayLocal;
 }
 
+/* ---------- Application Number Modal ---------- */
+
+function showAppNumberModal(appNo) {
+  const overlay = document.getElementById("appno-modal");
+  const numberEl = document.getElementById("appno-modal-number");
+  if (!overlay || !numberEl) return;
+
+  numberEl.textContent = appNo || "";
+  overlay.classList.add("is-open");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function hideAppNumberModal() {
+  const overlay = document.getElementById("appno-modal");
+  if (!overlay) return;
+  overlay.classList.remove("is-open");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
 /* ---------- Admixtures & SCM Dynamic Rows ---------- */
 
 function createAdmixtureRow(data = {}) {
@@ -919,6 +938,11 @@ async function submitForm(event) {
     addLocalRecord(data);
     renderSavedRecords();
 
+    // Show the application number modal
+    if (data.recordId) {
+      showAppNumberModal(data.recordId);
+    }
+
     await generatePDF(data);
 
     setStatusLine("Submitted and saved successfully.", "success");
@@ -1025,6 +1049,30 @@ function attachEventListeners() {
       if (record) loadRecordIntoForm(record);
     });
   }
+
+  // Application number modal events
+  const appnoOverlay = document.getElementById("appno-modal");
+  const appnoCloseBtn = document.getElementById("appno-modal-close");
+
+  if (appnoCloseBtn) {
+    appnoCloseBtn.addEventListener("click", hideAppNumberModal);
+  }
+
+  if (appnoOverlay) {
+    // Click outside the card closes modal
+    appnoOverlay.addEventListener("click", (e) => {
+      if (e.target === appnoOverlay) {
+        hideAppNumberModal();
+      }
+    });
+  }
+
+  // ESC key closes modal
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      hideAppNumberModal();
+    }
+  });
 }
 
 /* ---------- Init ---------- */
@@ -1037,9 +1085,3 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
-
-
-
-
-
-
