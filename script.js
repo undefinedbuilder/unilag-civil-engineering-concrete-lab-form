@@ -144,7 +144,7 @@ function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCemen
 }
 
 /**
- * Update derived W/C and mix ratio display (ratio mode only)
+ * Update derived W/C and mix ratio display
  */
 function updateDerivedMixValues() {
   let wcRatio = null;
@@ -639,13 +639,6 @@ async function generatePDF(data) {
   y += 14;
   doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`, margin, y);
   y += 14;
-
-  const wcRatioText =
-    typeof data.wcRatio === "number" && !isNaN(data.wcRatio)
-      ? data.wcRatio.toFixed(2)
-      : (data.wcRatio || "");
-  doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y);
-  y += 14;
   doc.text(
     `Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`,
     margin,
@@ -700,45 +693,79 @@ async function generatePDF(data) {
   );
   doc.text(notesLines, margin, y);
 
-  // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
-  const boxHeight = 110;
-  const boxWidth = pageW - margin * 2;
-  const copyrightGap = 20;
-  const boxY = pageH - margin - boxHeight - copyrightGap;
+// ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
+const boxHeight = 120;
+const boxWidth = pageW - margin * 2;
+const copyrightGap = 20;
+const boxX = margin;
+const boxY = pageH - margin - boxHeight - copyrightGap;
 
-  // Draw box
-  doc.setDrawColor(0);
-  doc.rect(margin, boxY, boxWidth, boxHeight);
+// Draw outer box
+doc.setDrawColor(0);
+doc.rect(boxX, boxY, boxWidth, boxHeight);
 
-  // Box title and content
-  let boxInnerY = boxY + 18;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("FOR OFFICE USE ONLY", pageW / 2, boxInnerY, { align: "center" });
+// Inner layout
+const innerMargin = 10;
+let boxInnerY = boxY + 16;
 
-  boxInnerY += 18;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+doc.setFont("helvetica", "bold");
+doc.setFontSize(10);
+doc.text("FOR OFFICE USE ONLY", boxX + innerMargin, boxInnerY);
+boxInnerY += 14;
 
-  doc.text(
-    "Tested by:   ____________________________    Date: ________________",
-    margin + 10,
-    boxInnerY
-  );
-  boxInnerY += 14;
+doc.setFont("helvetica", "normal");
+doc.setFontSize(9);
 
-  doc.text(
-    "Compressive Strength:  ____________________________",
-    margin + 10,
-    boxInnerY
-  );
-  boxInnerY += 14;
+doc.text(
+  "Tested by: ____________________________",
+  boxX + innerMargin,
+  boxInnerY
+);
+doc.text(
+  "Date: ________________",
+  boxX + boxWidth / 2,
+  boxInnerY
+);
+boxInnerY += 14;
 
-  doc.text(
-    "Remarks:     _________________________________________________",
-    margin + 10,
-    boxInnerY
-  );
+doc.text(
+  "Checked by: __________________________",
+  boxX + innerMargin,
+  boxInnerY
+);
+doc.text(
+  "Date: ________________",
+  boxX + boxWidth / 2,
+  boxInnerY
+);
+boxInnerY += 14;
+
+doc.text(
+  "Compressive Strength (MPa): ________________________________",
+  boxX + innerMargin,
+  boxInnerY
+);
+boxInnerY += 14;
+
+doc.text(
+  "Remarks:",
+  boxX + innerMargin,
+  boxInnerY
+);
+boxInnerY += 12;
+
+doc.text(
+  "___________________________________________________________",
+  boxX + innerMargin,
+  boxInnerY
+);
+boxInnerY += 12;
+
+doc.text(
+  "___________________________________________________________",
+  boxX + innerMargin,
+  boxInnerY
+);
 
   // ---------- COPYRIGHT LINE ----------
   doc.setFont("helvetica", "normal");
@@ -995,4 +1022,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
 
