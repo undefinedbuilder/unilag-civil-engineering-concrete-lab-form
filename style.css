@@ -289,33 +289,38 @@ input[type="radio"] {
    ============================== */
 
 .wc-box {
-  margin-top: 10px;
+  /* hidden by default – no space */
+  display: none;
+  margin-top: 0;
   padding: 8px 10px;
   border-radius: 12px;
   background: var(--unilag-blue-soft);
   border: 1px dashed rgba(59, 130, 246, 0.5);
   font-size: 0.82rem;
-  display: flex;
   justify-content: space-between;
   align-items: center;
-  opacity: 0;
-  transform: translateY(4px);
-  max-height: 0;
-  overflow: hidden;
-  transition:
-  opacity 0.25s ease,
-  transform 0.25s ease,
-  max-height 0.25s ease;
-}
-
-.wc-box.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-  max-height: 80px;
 }
 
 .wc-box strong {
   font-weight: 600;
+}
+
+/* Visible state with animation */
+.wc-box.is-visible {
+  display: flex;
+  margin-top: 10px;
+  animation: wcFadeIn 0.25s ease;
+}
+
+@keyframes wcFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 #wcRatioValue,
@@ -587,4 +592,5 @@ tbody tr:hover {
 .small-note {
   margin-top: 6px;
 }
+
 
