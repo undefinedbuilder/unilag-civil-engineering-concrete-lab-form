@@ -129,22 +129,10 @@ function setMixBoxVisible(show) {
   }
 }
 
-/**
- * Compute wcRatio and mixRatioString from ratio inputs.
- */
-function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCementRatio) {
-  const c = Number(ratioCement);
-  const f = Number(ratioFine);
-  const co = Number(ratioCoarse);
-  const wOverC = Number(waterCementRatio);
-
-  if (!c || c <= 0 || [f, co, wOverC].some((v) => isNaN(v))) {
-    return { wcRatio: null, mixRatioString: "" };
-  }
-
-  const wcRatio = wOverC;
-  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
-  return { wcRatio, mixRatioString };
+// Helper used on reset / init to hide both
+function toggleDerivedBoxes(show) {
+  setWcBoxVisible(show);
+  setMixBoxVisible(show);
 }
 
 /**
@@ -375,7 +363,7 @@ function collectFormData() {
     document.getElementById("waterCementRatio").value || 0
   );
 
-  // Compute derived values
+  // Compute derived values (and update UI)
   const { wcRatio, mixRatioString } = updateDerivedMixValues();
 
   const data = {
@@ -574,75 +562,217 @@ function loadRecordIntoForm(r) {
 
 /* ---------- PDF Generation ---------- */
 
-// ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
-const boxWidth = pageW - margin * 2;
-const copyrightGap = 24;
-const boxHeight = 140; // a bit taller so it visually fills better
-const boxX = margin;
-const boxY = pageH - margin - boxHeight - copyrightGap;
+async function generatePDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "A4" });
 
-// Draw outer box full between the margins
-doc.setDrawColor(0);
-doc.rect(boxX, boxY, boxWidth, boxHeight);
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 32;
+  let y = 40;
 
-// Inner layout
-const innerMargin = 12;
-let boxInnerY = boxY + 20;
+  // Logo
+  if (logoImageDataUrl) {
+    doc.addImage(logoImageDataUrl, "PNG", margin, y, 60, 60);
+  }
 
-doc.setFont("helvetica", "bold");
-doc.setFontSize(10);
-// Title aligned to left inside box
-doc.text("FOR OFFICE USE ONLY", boxX + innerMargin, boxInnerY);
+  // Header
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("CONCRETE LABORATORY – UNIVERSITY OF LAGOS", margin + 80, y + 20);
+  doc.setFontSize(10);
+  doc.text("Client's Cube Test Intake Form", margin + 80, y + 38);
+  y += 80;
 
-boxInnerY += 22;
-doc.setFont("helvetica", "normal");
-doc.setFontSize(9);
+  // Application No.
+  if (data.recordId) {
+    doc.setFont("helvetica", "bold");
+    doc.text(`Application No: ${data.recordId}`, margin, y);
+    y += 18;
+  }
 
-// Row 1: Tested by / Date – spaced horizontally
-doc.text(
-  "Tested by: ________________________________",
-  boxX + innerMargin,
-  boxInnerY
-);
-doc.text(
-  "Date: ________________",
-  boxX + boxWidth / 2,
-  boxInnerY
-);
+  // Client details
+  doc.setFont("helvetica", "bold");
+  doc.text("Client Details", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Client Name: ${data.clientName || ""}`, margin, y);
+  y += 14;
+  doc.text(`Contact Email: ${data.contactEmail || ""}`, margin, y);
+  y += 14;
+  doc.text(`Contact Phone: ${data.phoneNumber || ""}`, margin, y);
+  y += 14;
+  doc.text(`Organisation Type: ${data.organisationType || ""}`, margin, y);
+  y += 14;
+  doc.text(`Contact Person: ${data.contactPerson || ""}`, margin, y);
+  y += 14;
+  doc.text(`Project / Site: ${data.projectSite || ""}`, margin, y);
+  y += 20;
 
-boxInnerY += 22;
+  // Test information
+  doc.setFont("helvetica", "bold");
+  doc.text("Test Information", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Crushing Date: ${data.crushDate || ""}`, margin, y);
+  y += 14;
+  doc.text(`Concrete Type: ${data.concreteType || ""}`, margin, y);
+  y += 14;
+  doc.text(`Cement Type: ${data.cementType || ""}`, margin, y);
+  y += 14;
+  doc.text(`Slump (mm): ${data.slump ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Age at Testing (days): ${data.ageDays ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Number of Cubes: ${data.cubesCount ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Concrete Grade: ${data.concreteGrade ?? ""}`, margin, y);
+  y += 20;
 
-// Row 2: Compressive Strength
-doc.text(
-  "Compressive Strength (MPa): ________________________________",
-  boxX + innerMargin,
-  boxInnerY
-);
+  // Mix information – ratio only
+  doc.setFont("helvetica", "bold");
+  doc.text("Material Quantities (Mix Ratio & W/C)", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
 
-boxInnerY += 22;
+  doc.text(`Cement (part): ${data.ratioCement ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Fine Aggregate (part): ${data.ratioFine ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Coarse Aggregate (part): ${data.ratioCoarse ?? ""}`, margin, y);
+  y += 14;
+  doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`, margin, y);
+  y += 14;
 
-// Row 3 & 4: Remarks (two lines, with space to breathe)
-doc.text(
-  "Remarks:",
-  boxX + innerMargin,
-  boxInnerY
-);
+  const wcRatioText =
+    typeof data.wcRatio === "number" && !isNaN(data.wcRatio)
+      ? data.wcRatio.toFixed(2)
+      : (data.wcRatio || "");
+  doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y);
+  y += 14;
+  doc.text(
+    `Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`,
+    margin,
+    y
+  );
+  y += 20;
 
-boxInnerY += 18;
+  // Admixtures
+  doc.setFont("helvetica", "bold");
+  doc.text("Admixtures", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  if (data.admixtures && data.admixtures.length) {
+    data.admixtures.forEach((a, i) => {
+      doc.text(
+        `${i + 1}. ${a.name || ""} | ${a.dosage || ""} %`,
+        margin,
+        y
+      );
+      y += 14;
+    });
+  } else {
+    doc.text("None", margin, y);
+    y += 14;
+  }
+  y += 20;
 
-doc.text(
-  "______________________________________________________________",
-  boxX + innerMargin,
-  boxInnerY
-);
+  // SCMs
+  doc.setFont("helvetica", "bold");
+  doc.text("SCMs", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  if (data.scms && data.scms.length) {
+    data.scms.forEach((s, i) => {
+      doc.text(`${i + 1}. ${s.name || ""} | ${s.percent || ""}%`, margin, y);
+      y += 14;
+    });
+  } else {
+    doc.text("None", margin, y);
+    y += 14;
+  }
+  y += 20;
 
-boxInnerY += 18;
+  // Notes
+  doc.setFont("helvetica", "bold");
+  doc.text("Notes", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  const notesLines = doc.splitTextToSize(
+    data.notes || "",
+    pageW - margin * 2
+  );
+  doc.text(notesLines, margin, y);
 
-doc.text(
-  "______________________________________________________________",
-  boxX + innerMargin,
-  boxInnerY
-);
+  // ---------- FOR OFFICE USE ONLY BOX AT BOTTOM ----------
+  const boxWidth = pageW - margin * 2;
+  const copyrightGap = 24;
+  const boxHeight = 140; // a bit taller so it visually fills better
+  const boxX = margin;
+  const boxY = pageH - margin - boxHeight - copyrightGap;
+
+  // Draw outer box full between the margins
+  doc.setDrawColor(0);
+  doc.rect(boxX, boxY, boxWidth, boxHeight);
+
+  // Inner layout
+  const innerMargin = 12;
+  let boxInnerY = boxY + 20;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  // Title aligned to left inside box
+  doc.text("FOR OFFICE USE ONLY", boxX + innerMargin, boxInnerY);
+
+  boxInnerY += 22;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  // Row 1: Tested by / Date – spaced horizontally
+  doc.text(
+    "Tested by: ________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
+  doc.text(
+    "Date: ________________",
+    boxX + boxWidth / 2,
+    boxInnerY
+  );
+
+  boxInnerY += 22;
+
+  // Row 2: Compressive Strength
+  doc.text(
+    "Compressive Strength (MPa): ________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
+
+  boxInnerY += 22;
+
+  // Row 3 & 4: Remarks (two lines, with space to breathe)
+  doc.text(
+    "Remarks:",
+    boxX + innerMargin,
+    boxInnerY
+  );
+
+  boxInnerY += 18;
+
+  doc.text(
+    "______________________________________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
+
+  boxInnerY += 18;
+
+  doc.text(
+    "______________________________________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
 
   // ---------- COPYRIGHT LINE ----------
   doc.setFont("helvetica", "normal");
@@ -822,14 +952,15 @@ function resetForm() {
 /* ---------- Event Wiring ---------- */
 
 function attachEventListeners() {
+  // Force concrete grade to uppercase
   const concreteGradeInput = document.getElementById("concreteGrade");
   if (concreteGradeInput) {
-     concreteGradeInput.addEventListener("input", () => {
-       concreteGradeInput.value = concreteGradeInput.value.toUpperCase();
-     });
+    concreteGradeInput.addEventListener("input", () => {
+      concreteGradeInput.value = concreteGradeInput.value.toUpperCase();
+    });
   }
 
-   const form = document.getElementById("mix-form");
+  const form = document.getElementById("mix-form");
   if (form) {
     form.addEventListener("submit", submitForm);
   }
@@ -906,6 +1037,3 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
-
-
-
