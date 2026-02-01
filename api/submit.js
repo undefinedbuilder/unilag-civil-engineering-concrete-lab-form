@@ -195,10 +195,6 @@ export default async function handler(req, res) {
     const recordId = nextRecordId(lastId, prefix);
     const timestamp = new Date().toISOString();
 
-    /* IMPORTANT: No cement “Blended” mapping here.
-       We store whatever the front-end sends. */
-    const cementType = String(body.cementType || "").trim();
-
     /* Build row with no blank mode columns */
     let wcRatio = 0;
     let mixRatioString = "";
@@ -226,7 +222,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        cementType,
+        body.cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -256,7 +252,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        cementType,
+        body.cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -330,3 +326,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: err?.message || "Server error" });
   }
 }
+
