@@ -449,9 +449,6 @@ function collectFormData() {
     cementType = document.getElementById("cementTypeOther")?.value.trim() || "";
   }
 
-  // Compatibility mapping
-  if (cementType === "Blended (CEMII)") cementType = "Blended";
-
   const admixtures = [];
   document.querySelectorAll("#admixtures-container .dynamic-row").forEach((row) => {
     const name = row.querySelector('input[name="adm_name"]')?.value.trim() || "";
@@ -583,18 +580,6 @@ function setSelectWithOther(selectEl, otherInputEl, value) {
       selectEl.value = opt.value;
       matched = true;
       break;
-    }
-  }
-
-  if (!matched) {
-    if (selectEl.id === "cementType" && saved === "Blended (CEMII)") {
-      for (const opt of selectEl.options) {
-        if (opt.value === "Blended" || opt.text === "Blended") {
-          selectEl.value = "Blended";
-          matched = true;
-          break;
-        }
-      }
     }
   }
 
@@ -1186,3 +1171,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSavedRecords();
   attachEventListeners();
 });
+
