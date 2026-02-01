@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UNILAG Concrete Lab — Reprint PDF</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- Top header -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="unilag-logo.png" alt="UNILAG Logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="brand-title">Concrete Laboratory</div>
+          <div class="brand-subtitle">University of Lagos</div>
+        </div>
+      </div>
+
+      <nav class="topbar-nav">
+        <a class="nav-link" href="index.html">New Submission</a>
+        <a class="nav-link active" href="lookup.html">Reprint PDF</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="page-wrap">
+    <section class="card">
+      <h1 class="card-title">Reprint Application PDF</h1>
+      <p class="muted">
+        Enter the application number and we’ll rebuild the exact PDF (including “For Office Use Only”).
+      </p>
+
+      <div class="lookup-grid">
+        <label class="field">
+          <span class="label-line">Application Number <span class="required-asterisk">*</span></span>
+          <input id="lookupAppNo" type="text" placeholder="e.g. UNILAG-CLR-000123" />
+        </label>
+
+        <button id="lookupBtn" class="primary-btn" type="button">
+          Generate PDF
+        </button>
+      </div>
+
+      <div id="lookupStatus" class="status-pill status-info" style="display:none;"></div>
+
+      <div class="lookup-help">
+        <div class="pill">UNILAG-CLR = Ratio Mode</div>
+        <div class="pill">UNILAG-CLK = kg/m³ Mode</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
