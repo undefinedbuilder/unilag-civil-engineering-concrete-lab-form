@@ -6,7 +6,7 @@ import { google } from "googleapis";
 
 /* Sheet tab names (must exist in your Google Sheet) */
 const SHEET_RATIO_CANDIDATES = ["Client Master Sheet - Ratio"];
-const SHEET_KGM3_CANDIDATES = ["Client Master Sheet - kgm3", "Client Master Sheet - kg/m3"];
+const SHEET_KGM3_CANDIDATES = ["Client Master Sheet - kg/m3"];
 
 const SHEET_ADMIXTURES = "Client Admixtures";
 const SHEET_SCMS = "Client SCMs";
@@ -347,3 +347,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: err?.message || "Server error" });
   }
 }
+
