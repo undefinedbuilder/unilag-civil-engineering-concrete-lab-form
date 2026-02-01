@@ -205,6 +205,14 @@ form {
   padding-bottom: 4px;
 }
 
+/* This sub-title is used inside a section (e.g. Mix Ratio panel title) */
+.subsection-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
 .grid.two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -285,11 +293,92 @@ input[type="radio"] {
 }
 
 /* ==============================
+   MIX INPUT MODE (Improved UI)
+   ============================== */
+
+.mix-mode-wrap {
+  margin: 8px 0 14px;
+}
+
+.mix-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .mix-mode-toggle {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mix-mode-pill {
+  border-radius: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.mix-mode-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
+  border-color: rgba(119, 191, 232, 0.7);
+}
+
+.mix-mode-pill input[type="radio"] {
+  width: auto;
+  margin: 2px 0 0;
+  grid-row: 1 / span 2;
+  accent-color: var(--unilag-green);
+}
+
+.mix-mode-pill-title {
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--text-main);
+  line-height: 1.1;
+}
+
+.mix-mode-pill-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+.mix-mode-pill:has(input[type="radio"]:checked) {
+  border-color: rgba(0, 114, 60, 0.55);
+  background: linear-gradient(180deg, rgba(0, 114, 60, 0.06), rgba(119, 191, 232, 0.06));
+  box-shadow: 0 16px 34px rgba(0, 114, 60, 0.10);
+}
+
+/* Panels for mode content */
+.mix-mode-panel {
+  border-radius: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: linear-gradient(180deg, rgba(0, 114, 60, 0.06), rgba(249, 250, 251, 0.9));
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.mix-mode-panel .subsection-title {
+  margin: 0 0 10px;
+}
+
+/* ==============================
    SPECIAL BOXES (W/C & MIX RATIO)
    ============================== */
 
 .wc-box {
-  /* hidden by default – no space */
   display: none;
   margin-top: 0;
   padding: 8px 10px;
@@ -305,7 +394,6 @@ input[type="radio"] {
   font-weight: 600;
 }
 
-/* Visible state with animation */
 .wc-box.is-visible {
   display: flex;
   margin-top: 10px;
@@ -657,6 +745,7 @@ tbody tr:hover {
 /* ==============================
    FOOTER
    ============================== */
+
 footer {
   text-align: center;
   font-size: 0.78rem;
@@ -664,4 +753,3 @@ footer {
   margin: 20px auto 40px;
   padding: 10px;
 }
-
