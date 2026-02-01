@@ -2,20 +2,21 @@
    UNILAG CONCRETE LAB – CLIENT FORM (Front-End)
    -----------------------------------------------------------
    This script handles:
-   - Dynamic form UI (Other fields, admixtures, SCMs, input modes)
-   - Validation and form data collection
+   - Form UI behaviour (input mode switching, "Other" fields)
+   - Dynamic rows (Admixtures + SCMs)
+   - Validation + data collection
    - Derived W/C + derived mix ratio display
    - LocalStorage saving + table rendering + record loading
-   - Submit to backend and PDF generation
-   - CSV export and clear functions
+   - Submit to backend (/api/submit) + PDF generation (jsPDF)
+   - CSV export + clear all
 ----------------------------------------------------------- */
 
 const STORAGE_KEY = "unilag-concrete-lab-client-mixes";
 let logoImageDataUrl = null;
 
-/* -----------------------------
-   Helpers and status UI
------------------------------- */
+/* -----------------------------------------------------------
+   Helpers
+----------------------------------------------------------- */
 
 function loadImageAsDataURL(path) {
   return fetch(path)
@@ -32,11 +33,22 @@ function loadImageAsDataURL(path) {
 }
 
 function sanitizeFilename(name) {
-  return String(name)
+  return String(name || "")
     .replace(/[\\/:*?"<>|]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
+
+function setDateToToday(inputEl) {
+  if (!inputEl) return;
+  const tzOffset = new Date().getTimezoneOffset() * 60000;
+  const todayLocal = new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
+  inputEl.value = todayLocal;
+}
+
+/* -----------------------------------------------------------
+   Status UI
+----------------------------------------------------------- */
 
 function setStatusLine(message, type = "info") {
   const el = document.getElementById("status-line");
@@ -56,16 +68,9 @@ function setStatusLine(message, type = "info") {
   else el.classList.add("status-info");
 }
 
-function setDateToToday(inputEl) {
-  if (!inputEl) return;
-  const tzOffset = new Date().getTimezoneOffset() * 60000;
-  const todayLocal = new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
-  inputEl.value = todayLocal;
-}
-
-/* -----------------------------
+/* -----------------------------------------------------------
    Application number modal
------------------------------- */
+----------------------------------------------------------- */
 
 function showAppNumberModal(appNo) {
   const overlay = document.getElementById("appno-modal");
@@ -85,9 +90,9 @@ function hideAppNumberModal() {
   overlay.setAttribute("aria-hidden", "true");
 }
 
-/* -----------------------------
-   Dynamic rows (Admixtures and SCMs)
------------------------------- */
+/* -----------------------------------------------------------
+   Dynamic rows (Admixtures + SCMs)
+----------------------------------------------------------- */
 
 function createAdmixtureRow(data = {}) {
   const row = document.createElement("div");
@@ -133,20 +138,88 @@ function createScmRow(data = {}) {
   return row;
 }
 
-/* -----------------------------
-   Mix input mode and derived calculations
------------------------------- */
+/* -----------------------------------------------------------
+   Enable/Disable panel inputs
+----------------------------------------------------------- */
+
+function setPanelEnabled(panelId, enabled) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  panel.querySelectorAll("input, select, textarea").forEach((el) => {
+    el.disabled = !enabled;
+  });
+}
+
+/* -----------------------------------------------------------
+   Input Mode (Ratio vs kg/m³)
+----------------------------------------------------------- */
 
 function getSelectedInputMode() {
-  const kgRadio = document.getElementById("modeKgm3");
-  const ratioRadio = document.getElementById("modeRatio");
-  if (kgRadio && kgRadio.checked) return "kgm3";
-  if (ratioRadio && ratioRadio.checked) return "ratio";
+  const kg = document.getElementById("modeKgm3");
+  const ratio = document.getElementById("modeRatio");
+  if (kg && kg.checked) return "kgm3";
+  if (ratio && ratio.checked) return "ratio";
   return "ratio";
 }
 
+function syncModePanels() {
+  const mode = getSelectedInputMode();
+  const ratioPanel = document.getElementById("ratioInputs");
+  const kgPanel = document.getElementById("kgm3Inputs");
+
+  if (ratioPanel) ratioPanel.style.display = mode === "ratio" ? "" : "none";
+  if (kgPanel) kgPanel.style.display = mode === "kgm3" ? "" : "none";
+
+  // Disable inactive panel inputs (prevents accidental submission)
+  setPanelEnabled("ratioInputs", mode === "ratio");
+  setPanelEnabled("kgm3Inputs", mode === "kgm3");
+
+  // Refresh derived values
+  updateDerivedMixValues();
+}
+
+/* -----------------------------------------------------------
+   "Other" fields behaviour
+----------------------------------------------------------- */
+
+function syncConcreteTypeOther() {
+  const select = document.getElementById("concreteType");
+  const wrapper = document.getElementById("concreteTypeOtherWrapper");
+  if (!select || !wrapper) return;
+  wrapper.style.display = select.value === "Other" ? "" : "none";
+}
+
+function syncCementTypeOther() {
+  const select = document.getElementById("cementType");
+  const wrapper = document.getElementById("cementTypeOtherWrapper");
+  if (!select || !wrapper) return;
+  wrapper.style.display = select.value === "Other" ? "" : "none";
+}
+
+/* -----------------------------------------------------------
+   Derived values display (W/C + Mix Ratio)
+----------------------------------------------------------- */
+
+function setWcBoxVisible(visible) {
+  const box = document.getElementById("wcratio-box");
+  if (!box) return;
+  box.classList.toggle("is-visible", !!visible);
+}
+
+function setMixBoxVisible(visible) {
+  const box = document.getElementById("mixratio-box");
+  if (!box) return;
+  box.classList.toggle("is-visible", !!visible);
+}
+
+function toggleDerivedBoxes(visible) {
+  setWcBoxVisible(visible);
+  setMixBoxVisible(visible);
+}
+
 function normalizeRatioText(n) {
-  if (!isFinite(n)) return "";
+  if (!Number.isFinite(n)) return "";
   return Number(n).toFixed(2);
 }
 
@@ -154,29 +227,31 @@ function computeDerivedFromRatioInputs() {
   const cEl = document.getElementById("ratioCement");
   const fEl = document.getElementById("ratioFine");
   const coEl = document.getElementById("ratioCoarse");
-  const wOverCEl = document.getElementById("waterCementRatio");
+  const wEl = document.getElementById("waterCementRatio");
 
-  if (!cEl || !fEl || !coEl || !wOverCEl) return { wcRatio: null, mixRatioString: "" };
+  if (!cEl || !fEl || !coEl || !wEl) return { wcRatio: null, mixRatioString: "" };
 
-  const cVal = String(cEl.value).trim();
+  const cVal = String(cEl.value).trim() || "1";
   const fVal = String(fEl.value).trim();
   const coVal = String(coEl.value).trim();
-  const wVal = String(wOverCEl.value).trim();
+  const wVal = String(wEl.value).trim();
 
-  const cNum = Number(cVal || "1");
-  const fNum = Number(fVal);
-  const coNum = Number(coVal);
-  const wNum = Number(wVal);
+  const c = Number(cVal);
+  const f = Number(fVal);
+  const co = Number(coVal);
+  const wOverC = Number(wVal);
 
-  let mixRatioString = "";
   let wcRatio = null;
+  let mixRatioString = "";
 
-  const mixInputsFilled = cVal !== "" && fVal !== "" && coVal !== "";
-  if (mixInputsFilled && cNum > 0 && isFinite(fNum) && isFinite(coNum)) {
-    mixRatioString = `1 : ${normalizeRatioText(fNum / cNum)} : ${normalizeRatioText(coNum / cNum)}`;
+  const partsFilled = fVal !== "" && coVal !== "" && Number.isFinite(c) && c > 0;
+  if (partsFilled && Number.isFinite(f) && Number.isFinite(co)) {
+    mixRatioString = `1 : ${normalizeRatioText(f / c)} : ${normalizeRatioText(co / c)}`;
   }
 
-  if (wVal !== "" && isFinite(wNum)) wcRatio = wNum;
+  if (wVal !== "" && Number.isFinite(wOverC)) {
+    wcRatio = wOverC;
+  }
 
   return { wcRatio, mixRatioString };
 }
@@ -202,25 +277,15 @@ function computeDerivedFromKgm3Inputs() {
   let wcRatio = null;
   let mixRatioString = "";
 
-  if (cVal !== "" && wVal !== "" && c > 0 && isFinite(w)) wcRatio = w / c;
+  const allFilled =
+    cVal !== "" && wVal !== "" && fVal !== "" && coVal !== "" && Number.isFinite(c) && c > 0;
 
-  if (cVal !== "" && fVal !== "" && coVal !== "" && c > 0 && isFinite(f) && isFinite(co)) {
+  if (allFilled && [w, f, co].every(Number.isFinite)) {
+    wcRatio = w / c;
     mixRatioString = `1 : ${normalizeRatioText(f / c)} : ${normalizeRatioText(co / c)}`;
   }
 
   return { wcRatio, mixRatioString };
-}
-
-function setWcBoxVisible(show) {
-  const wcBox = document.getElementById("wcratio-box");
-  if (!wcBox) return;
-  wcBox.classList.toggle("is-visible", Boolean(show));
-}
-
-function setMixBoxVisible(show) {
-  const mixBox = document.getElementById("mixratio-box");
-  if (!mixBox) return;
-  mixBox.classList.toggle("is-visible", Boolean(show));
 }
 
 function updateDerivedMixValues() {
@@ -230,59 +295,39 @@ function updateDerivedMixValues() {
   const mode = getSelectedInputMode();
   const derived = mode === "kgm3" ? computeDerivedFromKgm3Inputs() : computeDerivedFromRatioInputs();
 
-  if (derived.mixRatioString) {
-    if (mixSpan) mixSpan.textContent = derived.mixRatioString;
-    setMixBoxVisible(true);
-  } else {
-    if (mixSpan) mixSpan.textContent = "";
-    setMixBoxVisible(false);
-  }
+  const { wcRatio, mixRatioString } = derived;
 
-  if (typeof derived.wcRatio === "number" && isFinite(derived.wcRatio)) {
-    if (wcSpan) wcSpan.textContent = derived.wcRatio.toFixed(2);
+  if (wcSpan && typeof wcRatio === "number" && Number.isFinite(wcRatio)) {
+    wcSpan.textContent = wcRatio.toFixed(2);
     setWcBoxVisible(true);
   } else {
     if (wcSpan) wcSpan.textContent = "";
     setWcBoxVisible(false);
   }
 
-  return derived;
+  if (mixSpan && mixRatioString) {
+    mixSpan.textContent = mixRatioString;
+    setMixBoxVisible(true);
+  } else {
+    if (mixSpan) mixSpan.textContent = "";
+    setMixBoxVisible(false);
+  }
+
+  return { wcRatio, mixRatioString };
 }
 
-function syncMixModeUI() {
-  const mode = getSelectedInputMode();
-  const ratioPanel = document.getElementById("ratioInputs");
-  const kgPanel = document.getElementById("kgm3Inputs");
-
-  if (ratioPanel) ratioPanel.style.display = mode === "ratio" ? "" : "none";
-  if (kgPanel) kgPanel.style.display = mode === "kgm3" ? "" : "none";
-
-  updateDerivedMixValues();
-}
-
-/* -----------------------------
-   Show / hide “Other” fields
------------------------------- */
-
-function syncConcreteTypeOther() {
-  const select = document.getElementById("concreteType");
-  const wrapper = document.getElementById("concreteTypeOtherWrapper");
-  if (!select || !wrapper) return;
-  wrapper.style.display = select.value === "Other" ? "" : "none";
-}
-
-function syncCementTypeOther() {
-  const select = document.getElementById("cementType");
-  const wrapper = document.getElementById("cementTypeOtherWrapper");
-  if (!select || !wrapper) return;
-  wrapper.style.display = select.value === "Other" ? "" : "none";
-}
-
-/* -----------------------------
+/* -----------------------------------------------------------
    Validation
------------------------------- */
+----------------------------------------------------------- */
 
 function validateForm() {
+  document.querySelectorAll(".error").forEach((el) => el.classList.remove("error"));
+
+  const errorSummary = document.getElementById("form-error-summary");
+  if (errorSummary) errorSummary.style.display = "none";
+
+  const mode = getSelectedInputMode();
+
   const commonRequired = [
     "clientName",
     "contactEmail",
@@ -299,23 +344,24 @@ function validateForm() {
     "concreteGrade",
   ];
 
-  const mode = getSelectedInputMode();
-  const ratioRequired = ["ratioCement", "ratioFine", "ratioCoarse", "waterCementRatio"];
+  const ratioRequired = ["ratioFine", "ratioCoarse", "waterCementRatio"]; // ratioCement fixed at 1
   const kgRequired = ["cementKgm3", "waterKgm3", "fineKgm3", "coarseKgm3"];
-
-  document.querySelectorAll(".error").forEach((el) => el.classList.remove("error"));
 
   const missing = [];
   let firstBad = null;
 
+  function markBad(el, idForMissing) {
+    if (!el) return;
+    el.classList.add("error");
+    missing.push(idForMissing || el.id || "field");
+    if (!firstBad) firstBad = el;
+  }
+
   function checkId(id) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (!String(el.value).trim()) {
-      el.classList.add("error");
-      missing.push(id);
-      if (!firstBad) firstBad = el;
-    }
+    if (el.disabled) return; // Do not validate disabled inputs (inactive mode)
+    if (!String(el.value).trim()) markBad(el, id);
   }
 
   commonRequired.forEach(checkId);
@@ -326,21 +372,19 @@ function validateForm() {
   const cementType = document.getElementById("cementType");
   if (cementType && cementType.value === "Other") checkId("cementTypeOther");
 
-  (mode === "kgm3" ? kgRequired : ratioRequired).forEach(checkId);
+  if (mode === "kgm3") kgRequired.forEach(checkId);
+  else ratioRequired.forEach(checkId);
 
   const admRows = document.querySelectorAll("#admixtures-container .dynamic-row");
   admRows.forEach((row) => {
     const nameInput = row.querySelector('input[name="adm_name"]');
     const dosageInput = row.querySelector('input[name="adm_dosage"]');
-
     const nameEmpty = !nameInput || !nameInput.value.trim();
     const dosageEmpty = !dosageInput || !dosageInput.value.trim();
 
     if (nameEmpty || dosageEmpty) {
-      if (nameEmpty && nameInput) nameInput.classList.add("error");
-      if (dosageEmpty && dosageInput) dosageInput.classList.add("error");
-      missing.push("admixtures");
-      if (!firstBad) firstBad = nameInput || dosageInput;
+      if (nameEmpty) markBad(nameInput, "admixtures");
+      if (dosageEmpty) markBad(dosageInput, "admixtures");
     }
   });
 
@@ -348,19 +392,14 @@ function validateForm() {
   scmRows.forEach((row) => {
     const nameInput = row.querySelector('input[name="scm_name"]');
     const percentInput = row.querySelector('input[name="scm_percent"]');
-
     const nameEmpty = !nameInput || !nameInput.value.trim();
     const percentEmpty = !percentInput || !percentInput.value.trim();
 
     if (nameEmpty || percentEmpty) {
-      if (nameEmpty && nameInput) nameInput.classList.add("error");
-      if (percentEmpty && percentInput) percentInput.classList.add("error");
-      missing.push("scms");
-      if (!firstBad) firstBad = nameInput || percentInput;
+      if (nameEmpty) markBad(nameInput, "scms");
+      if (percentEmpty) markBad(percentInput, "scms");
     }
   });
-
-  const errorSummary = document.getElementById("form-error-summary");
 
   if (missing.length) {
     if (errorSummary) {
@@ -371,90 +410,124 @@ function validateForm() {
     return false;
   }
 
-  if (errorSummary) errorSummary.style.display = "none";
   return true;
 }
 
-/* -----------------------------
-   Data collection
------------------------------- */
+/* -----------------------------------------------------------
+   Collect form data
+----------------------------------------------------------- */
 
 function collectFormData() {
-  const inputMode = getSelectedInputMode();
+  let concreteType = document.getElementById("concreteType")?.value || "";
+  if (concreteType === "Other") {
+    concreteType = document.getElementById("concreteTypeOther")?.value.trim() || "";
+  }
 
-  let concreteType = document.getElementById("concreteType").value;
-  if (concreteType === "Other") concreteType = document.getElementById("concreteTypeOther").value.trim();
+  let cementType = document.getElementById("cementType")?.value || "";
+  if (cementType === "Other") {
+    cementType = document.getElementById("cementTypeOther")?.value.trim() || "";
+  }
 
-  let cementType = document.getElementById("cementType").value;
-  if (cementType === "Other") cementType = document.getElementById("cementTypeOther").value.trim();
+  // Compatibility normalization
+  if (cementType === "Blended (CEMII)") cementType = "Blended";
 
   const admixtures = [];
   document.querySelectorAll("#admixtures-container .dynamic-row").forEach((row) => {
-    const name = row.querySelector('input[name="adm_name"]').value.trim();
-    const dosage = row.querySelector('input[name="adm_dosage"]').value.trim();
+    const name = row.querySelector('input[name="adm_name"]')?.value.trim() || "";
+    const dosage = row.querySelector('input[name="adm_dosage"]')?.value.trim() || "";
     if (name || dosage) admixtures.push({ name, dosage });
   });
 
   const scms = [];
   document.querySelectorAll("#scms-container .dynamic-row").forEach((row) => {
-    const name = row.querySelector('input[name="scm_name"]').value.trim();
-    const percent = row.querySelector('input[name="scm_percent"]').value.trim();
+    const name = row.querySelector('input[name="scm_name"]')?.value.trim() || "";
+    const percent = row.querySelector('input[name="scm_percent"]')?.value.trim() || "";
     if (name || percent) scms.push({ name, percent });
   });
 
-  const ratioCement = Number(document.getElementById("ratioCement")?.value || 0);
-  const ratioFine = Number(document.getElementById("ratioFine")?.value || 0);
-  const ratioCoarse = Number(document.getElementById("ratioCoarse")?.value || 0);
-  const waterCementRatio = Number(document.getElementById("waterCementRatio")?.value || 0);
-
-  const cementKgm3 = Number(document.getElementById("cementKgm3")?.value || 0);
-  const waterKgm3 = Number(document.getElementById("waterKgm3")?.value || 0);
-  const fineKgm3 = Number(document.getElementById("fineKgm3")?.value || 0);
-  const coarseKgm3 = Number(document.getElementById("coarseKgm3")?.value || 0);
-
+  const inputMode = getSelectedInputMode();
   const { wcRatio, mixRatioString } = updateDerivedMixValues();
+
+  // Mode-specific fields (only active mode is sent)
+  let ratioCement = "";
+  let ratioFine = "";
+  let ratioCoarse = "";
+  let waterCementRatio = "";
+
+  let cementKgm3 = "";
+  let waterKgm3 = "";
+  let fineKgm3 = "";
+  let coarseKgm3 = "";
+
+  if (inputMode === "ratio") {
+    ratioCement = Number(document.getElementById("ratioCement")?.value || 1);
+    ratioFine = Number(document.getElementById("ratioFine")?.value || 0);
+    ratioCoarse = Number(document.getElementById("ratioCoarse")?.value || 0);
+    waterCementRatio = Number(document.getElementById("waterCementRatio")?.value || 0);
+
+    // Ensure kg/m³ fields are not sent
+    cementKgm3 = "";
+    waterKgm3 = "";
+    fineKgm3 = "";
+    coarseKgm3 = "";
+  } else {
+    cementKgm3 = Number(document.getElementById("cementKgm3")?.value || 0);
+    waterKgm3 = Number(document.getElementById("waterKgm3")?.value || 0);
+    fineKgm3 = Number(document.getElementById("fineKgm3")?.value || 0);
+    coarseKgm3 = Number(document.getElementById("coarseKgm3")?.value || 0);
+
+    // Ensure ratio fields are not sent
+    ratioCement = "";
+    ratioFine = "";
+    ratioCoarse = "";
+    waterCementRatio = "";
+  }
 
   return {
     inputMode,
 
-    clientName: document.getElementById("clientName").value.trim(),
-    contactEmail: document.getElementById("contactEmail").value.trim(),
-    organisationType: document.getElementById("organisationType").value.trim(),
-    contactPerson: document.getElementById("contactPerson").value.trim(),
-    phoneNumber: document.getElementById("phoneNumber").value.trim(),
-    projectSite: document.getElementById("projectSite").value.trim(),
-    crushDate: document.getElementById("crushDate").value,
+    clientName: document.getElementById("clientName")?.value.trim() || "",
+    contactEmail: document.getElementById("contactEmail")?.value.trim() || "",
+    organisationType: document.getElementById("organisationType")?.value.trim() || "",
+    contactPerson: document.getElementById("contactPerson")?.value.trim() || "",
+    phoneNumber: document.getElementById("phoneNumber")?.value.trim() || "",
+    projectSite: document.getElementById("projectSite")?.value.trim() || "",
 
+    crushDate: document.getElementById("crushDate")?.value || "",
     concreteType,
     cementType,
 
-    slump: Number(document.getElementById("slump").value || 0),
-    ageDays: Number(document.getElementById("ageDays").value || 0),
-    cubesCount: Number(document.getElementById("cubesCount").value || 0),
-    concreteGrade: document.getElementById("concreteGrade").value.trim(),
-    notes: document.getElementById("notes").value.trim(),
+    slump: Number(document.getElementById("slump")?.value || 0),
+    ageDays: Number(document.getElementById("ageDays")?.value || 0),
+    cubesCount: Number(document.getElementById("cubesCount")?.value || 0),
+    concreteGrade: document.getElementById("concreteGrade")?.value.trim() || "",
+    notes: document.getElementById("notes")?.value.trim() || "",
 
+    // Ratio (active only)
     ratioCement,
     ratioFine,
     ratioCoarse,
     waterCementRatio,
 
+    // kg/m³ (active only)
     cementKgm3,
     waterKgm3,
     fineKgm3,
     coarseKgm3,
 
+    // Dynamic groups
     admixtures,
     scms,
 
+    // Derived
     wcRatio,
     mixRatioString,
   };
 }
 
-/* -----------------------------
-   LocalStorage saving and table rendering
------------------------------- */
+/* -----------------------------------------------------------
+   LocalStorage records
+----------------------------------------------------------- */
 
 function getLocalRecords() {
   try {
@@ -474,6 +547,10 @@ function addLocalRecord(record) {
   saveLocalRecords(list);
 }
 
+/* -----------------------------------------------------------
+   Render Saved Table
+----------------------------------------------------------- */
+
 function renderSavedRecords() {
   const list = getLocalRecords();
   const tbody = document.getElementById("mixes-table-body");
@@ -490,13 +567,15 @@ function renderSavedRecords() {
     const tr = document.createElement("tr");
     tr.dataset.index = String(i);
 
-    const wcText = typeof r.wcRatio === "number" && isFinite(r.wcRatio) ? r.wcRatio.toFixed(2) : "";
+    const wcText =
+      typeof r.wcRatio === "number" && Number.isFinite(r.wcRatio) ? r.wcRatio.toFixed(2) : "";
+
     const when = r.savedAt ? new Date(r.savedAt).toLocaleString() : "";
 
     tr.innerHTML = `
       <td>${r.recordId || "—"}</td>
       <td>${r.clientName || ""}</td>
-      <td>${r.concreteType || ""}</td>
+      <td>${r.inputMode === "kgm3" ? "kg/m³" : "Ratio"}</td>
       <td>${wcText}</td>
       <td>${when}</td>
     `;
@@ -505,9 +584,48 @@ function renderSavedRecords() {
   });
 }
 
-/* -----------------------------
-   Loading a saved record back into the form
------------------------------- */
+/* -----------------------------------------------------------
+   Load Record Back Into Form
+----------------------------------------------------------- */
+
+function setSelectWithOther(selectEl, otherInputEl, value) {
+  if (!selectEl) return;
+
+  const saved = String(value || "").trim();
+  let matched = false;
+
+  for (const opt of selectEl.options) {
+    if (opt.value === saved || opt.text === saved) {
+      selectEl.value = opt.value;
+      matched = true;
+      break;
+    }
+  }
+
+  if (!matched) {
+    if (selectEl.id === "cementType" && saved === "Blended (CEMII)") {
+      for (const opt of selectEl.options) {
+        if (opt.value === "Blended" || opt.text === "Blended") {
+          selectEl.value = "Blended";
+          matched = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!matched) {
+    if (saved) {
+      selectEl.value = "Other";
+      if (otherInputEl) otherInputEl.value = saved;
+    } else {
+      selectEl.value = "";
+      if (otherInputEl) otherInputEl.value = "";
+    }
+  } else {
+    if (otherInputEl) otherInputEl.value = "";
+  }
+}
 
 function loadRecordIntoForm(r) {
   document.getElementById("clientName").value = r.clientName || "";
@@ -523,83 +641,38 @@ function loadRecordIntoForm(r) {
   document.getElementById("concreteGrade").value = r.concreteGrade ?? "";
   document.getElementById("notes").value = r.notes || "";
 
-  const mode = r.inputMode === "kgm3" ? "kgm3" : "ratio";
+  setSelectWithOther(
+    document.getElementById("concreteType"),
+    document.getElementById("concreteTypeOther"),
+    r.concreteType || ""
+  );
+
+  setSelectWithOther(
+    document.getElementById("cementType"),
+    document.getElementById("cementTypeOther"),
+    r.cementType || ""
+  );
+
   const ratioRadio = document.getElementById("modeRatio");
   const kgRadio = document.getElementById("modeKgm3");
+  const mode = r.inputMode === "kgm3" ? "kgm3" : "ratio";
   if (ratioRadio) ratioRadio.checked = mode === "ratio";
   if (kgRadio) kgRadio.checked = mode === "kgm3";
 
-  const concreteSelect = document.getElementById("concreteType");
-  const concreteOther = document.getElementById("concreteTypeOther");
-  if (concreteSelect) {
-    const saved = r.concreteType || "";
-    let matched = false;
+  document.getElementById("ratioCement").value = r.ratioCement ?? "1";
+  document.getElementById("ratioFine").value = r.ratioFine ?? "";
+  document.getElementById("ratioCoarse").value = r.ratioCoarse ?? "";
+  document.getElementById("waterCementRatio").value = r.waterCementRatio ?? "";
 
-    for (const opt of concreteSelect.options) {
-      if (opt.value === saved || opt.text === saved) {
-        concreteSelect.value = opt.value;
-        matched = true;
-        break;
-      }
-    }
+  const cementKgm3 = document.getElementById("cementKgm3");
+  const waterKgm3 = document.getElementById("waterKgm3");
+  const fineKgm3 = document.getElementById("fineKgm3");
+  const coarseKgm3 = document.getElementById("coarseKgm3");
 
-    if (!matched) {
-      if (saved) {
-        concreteSelect.value = "Other";
-        if (concreteOther) concreteOther.value = saved;
-      } else {
-        concreteSelect.value = "";
-        if (concreteOther) concreteOther.value = "";
-      }
-    } else if (concreteOther) {
-      concreteOther.value = "";
-    }
-  }
-
-  const cementSelect = document.getElementById("cementType");
-  const cementOther = document.getElementById("cementTypeOther");
-  if (cementSelect) {
-    const saved = r.cementType || "";
-    let matched = false;
-
-    for (const opt of cementSelect.options) {
-      if (opt.value === saved || opt.text === saved) {
-        cementSelect.value = opt.value;
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      if (saved) {
-        cementSelect.value = "Other";
-        if (cementOther) cementOther.value = saved;
-      } else {
-        cementSelect.value = "";
-        if (cementOther) cementOther.value = "";
-      }
-    } else if (cementOther) {
-      cementOther.value = "";
-    }
-  }
-
-  const ratioCementEl = document.getElementById("ratioCement");
-  if (ratioCementEl) ratioCementEl.value = r.ratioCement ?? "1";
-  const ratioFineEl = document.getElementById("ratioFine");
-  if (ratioFineEl) ratioFineEl.value = r.ratioFine ?? "";
-  const ratioCoarseEl = document.getElementById("ratioCoarse");
-  if (ratioCoarseEl) ratioCoarseEl.value = r.ratioCoarse ?? "";
-  const wcrEl = document.getElementById("waterCementRatio");
-  if (wcrEl) wcrEl.value = r.waterCementRatio ?? "";
-
-  const cK = document.getElementById("cementKgm3");
-  if (cK) cK.value = r.cementKgm3 ?? "";
-  const wK = document.getElementById("waterKgm3");
-  if (wK) wK.value = r.waterKgm3 ?? "";
-  const fK = document.getElementById("fineKgm3");
-  if (fK) fK.value = r.fineKgm3 ?? "";
-  const coK = document.getElementById("coarseKgm3");
-  if (coK) coK.value = r.coarseKgm3 ?? "";
+  if (cementKgm3) cementKgm3.value = r.cementKgm3 ?? "";
+  if (waterKgm3) waterKgm3.value = r.waterKgm3 ?? "";
+  if (fineKgm3) fineKgm3.value = r.fineKgm3 ?? "";
+  if (coarseKgm3) coarseKgm3.value = r.coarseKgm3 ?? "";
 
   const admContainer = document.getElementById("admixtures-container");
   admContainer.innerHTML = "";
@@ -615,15 +688,20 @@ function loadRecordIntoForm(r) {
 
   syncConcreteTypeOther();
   syncCementTypeOther();
-  syncMixModeUI();
-  updateDerivedMixValues();
+  syncModePanels();
 
   setStatusLine("Saved record loaded into form.", "info");
 }
 
-/* -----------------------------
-   PDF generation
------------------------------- */
+/* -----------------------------------------------------------
+   PDF Generation (jsPDF)
+----------------------------------------------------------- */
+
+function pdfEnsureSpace(doc, y, needed, margin, pageH) {
+  if (y + needed <= pageH - margin) return { y, pageAdded: false };
+  doc.addPage();
+  return { y: margin, pageAdded: true };
+}
 
 async function generatePDF(data) {
   const { jsPDF } = window.jspdf;
@@ -634,7 +712,9 @@ async function generatePDF(data) {
   const margin = 32;
   let y = 40;
 
-  if (logoImageDataUrl) doc.addImage(logoImageDataUrl, "PNG", margin, y, 60, 60);
+  if (logoImageDataUrl) {
+    doc.addImage(logoImageDataUrl, "PNG", margin, y, 60, 60);
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
@@ -652,77 +732,138 @@ async function generatePDF(data) {
   doc.setFont("helvetica", "bold");
   doc.text("Client Details", margin, y);
   y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Client Name: ${data.clientName || ""}`, margin, y); y += 14;
-  doc.text(`Contact Email: ${data.contactEmail || ""}`, margin, y); y += 14;
-  doc.text(`Contact Phone: ${data.phoneNumber || ""}`, margin, y); y += 14;
-  doc.text(`Organisation Type: ${data.organisationType || ""}`, margin, y); y += 14;
-  doc.text(`Contact Person: ${data.contactPerson || ""}`, margin, y); y += 14;
-  doc.text(`Project / Site: ${data.projectSite || ""}`, margin, y); y += 20;
 
+  doc.setFont("helvetica", "normal");
+  const clientLines = [
+    `Client Name: ${data.clientName || ""}`,
+    `Contact Email: ${data.contactEmail || ""}`,
+    `Contact Phone: ${data.phoneNumber || ""}`,
+    `Organisation Type: ${data.organisationType || ""}`,
+    `Contact Person: ${data.contactPerson || ""}`,
+    `Project / Site: ${data.projectSite || ""}`,
+  ];
+
+  clientLines.forEach((line) => {
+    ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+    doc.text(line, margin, y);
+    y += 14;
+  });
+
+  y += 6;
+
+  ({ y } = pdfEnsureSpace(doc, y, 80, margin, pageH));
   doc.setFont("helvetica", "bold");
   doc.text("Test Information", margin, y);
   y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Crushing Date: ${data.crushDate || ""}`, margin, y); y += 14;
-  doc.text(`Concrete Type: ${data.concreteType || ""}`, margin, y); y += 14;
-  doc.text(`Cement Type: ${data.cementType || ""}`, margin, y); y += 14;
-  doc.text(`Slump / Flow (mm): ${data.slump ?? ""}`, margin, y); y += 14;
-  doc.text(`Age at Testing (days): ${data.ageDays ?? ""}`, margin, y); y += 14;
-  doc.text(`Number of Cubes: ${data.cubesCount ?? ""}`, margin, y); y += 14;
-  doc.text(`Concrete Grade: ${data.concreteGrade ?? ""}`, margin, y); y += 20;
 
+  doc.setFont("helvetica", "normal");
+  const testLines = [
+    `Crushing Date: ${data.crushDate || ""}`,
+    `Concrete Type: ${data.concreteType || ""}`,
+    `Cement Type: ${data.cementType || ""}`,
+    `Slump / Flow (mm): ${data.slump ?? ""}`,
+    `Age at Testing (days): ${data.ageDays ?? ""}`,
+    `Number of Cubes: ${data.cubesCount ?? ""}`,
+    `Concrete Grade: ${data.concreteGrade ?? ""}`,
+  ];
+
+  testLines.forEach((line) => {
+    ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+    doc.text(line, margin, y);
+    y += 14;
+  });
+
+  y += 6;
+
+  ({ y } = pdfEnsureSpace(doc, y, 120, margin, pageH));
   doc.setFont("helvetica", "bold");
   doc.text("Mix Design", margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
 
+  const modeLabel = data.inputMode === "kgm3" ? "kg/m³" : "Ratio";
+  doc.text(`Input Mode: ${modeLabel}`, margin, y);
+  y += 14;
+
   if (data.inputMode === "kgm3") {
-    doc.text("Input mode: kg/m³", margin, y); y += 14;
-    doc.text(`Cement (kg/m³): ${data.cementKgm3 ?? ""}`, margin, y); y += 14;
-    doc.text(`Water (kg/m³): ${data.waterKgm3 ?? ""}`, margin, y); y += 14;
-    doc.text(`Fine aggregate (kg/m³): ${data.fineKgm3 ?? ""}`, margin, y); y += 14;
-    doc.text(`Coarse aggregate (kg/m³): ${data.coarseKgm3 ?? ""}`, margin, y); y += 14;
+    const kgLines = [
+      `Cement (kg/m³): ${data.cementKgm3 ?? ""}`,
+      `Water (kg/m³): ${data.waterKgm3 ?? ""}`,
+      `Fine Aggregate (kg/m³): ${data.fineKgm3 ?? ""}`,
+      `Coarse Aggregate (kg/m³): ${data.coarseKgm3 ?? ""}`,
+    ];
+    kgLines.forEach((line) => {
+      ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+      doc.text(line, margin, y);
+      y += 14;
+    });
   } else {
-    doc.text("Input mode: Mix ratio", margin, y); y += 14;
-    doc.text(`Cement (part): ${data.ratioCement ?? ""}`, margin, y); y += 14;
-    doc.text(`Fine aggregate (part): ${data.ratioFine ?? ""}`, margin, y); y += 14;
-    doc.text(`Coarse aggregate (part): ${data.ratioCoarse ?? ""}`, margin, y); y += 14;
-    doc.text(`Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`, margin, y); y += 14;
+    const ratioLines = [
+      `Mix Ratio Parts (Cement : Fine : Coarse): ${data.ratioCement ?? ""} : ${data.ratioFine ?? ""} : ${data.ratioCoarse ?? ""}`,
+      `Water–Cement Ratio (W/C): ${data.waterCementRatio ?? ""}`,
+    ];
+    ratioLines.forEach((line) => {
+      ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+      doc.text(line, margin, y);
+      y += 14;
+    });
   }
 
   const wcRatioText =
-    typeof data.wcRatio === "number" && isFinite(data.wcRatio) ? data.wcRatio.toFixed(2) : (data.wcRatio || "");
-  doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y); y += 14;
-  doc.text(`Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`, margin, y); y += 20;
+    typeof data.wcRatio === "number" && Number.isFinite(data.wcRatio)
+      ? data.wcRatio.toFixed(2)
+      : data.wcRatio || "";
 
+  ({ y } = pdfEnsureSpace(doc, y, 40, margin, pageH));
+  doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y);
+  y += 14;
+  doc.text(`Derived Mix Ratio (C:F:C): ${data.mixRatioString || ""}`, margin, y);
+  y += 20;
+
+  ({ y } = pdfEnsureSpace(doc, y, 60, margin, pageH));
   doc.setFont("helvetica", "bold");
   doc.text("Admixtures", margin, y);
   y += 16;
-  doc.setFont("helvetica", "normal");
-  if (data.admixtures && data.admixtures.length) {
-    data.admixtures.forEach((a, i) => { doc.text(`${i + 1}. ${a.name || ""} | ${a.dosage || ""}%`, margin, y); y += 14; });
-  } else {
-    doc.text("None", margin, y); y += 14;
-  }
-  y += 20;
 
+  doc.setFont("helvetica", "normal");
+  if (Array.isArray(data.admixtures) && data.admixtures.length) {
+    data.admixtures.forEach((a, i) => {
+      ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+      doc.text(`${i + 1}. ${a.name || ""} | ${a.dosage || ""}%`, margin, y);
+      y += 14;
+    });
+  } else {
+    doc.text("None", margin, y);
+    y += 14;
+  }
+  y += 10;
+
+  ({ y } = pdfEnsureSpace(doc, y, 60, margin, pageH));
   doc.setFont("helvetica", "bold");
   doc.text("SCMs", margin, y);
   y += 16;
-  doc.setFont("helvetica", "normal");
-  if (data.scms && data.scms.length) {
-    data.scms.forEach((s, i) => { doc.text(`${i + 1}. ${s.name || ""} | ${s.percent || ""}%`, margin, y); y += 14; });
-  } else {
-    doc.text("None", margin, y); y += 14;
-  }
-  y += 20;
 
+  doc.setFont("helvetica", "normal");
+  if (Array.isArray(data.scms) && data.scms.length) {
+    data.scms.forEach((s, i) => {
+      ({ y } = pdfEnsureSpace(doc, y, 18, margin, pageH));
+      doc.text(`${i + 1}. ${s.name || ""} | ${s.percent || ""}%`, margin, y);
+      y += 14;
+    });
+  } else {
+    doc.text("None", margin, y);
+    y += 14;
+  }
+  y += 10;
+
+  ({ y } = pdfEnsureSpace(doc, y, 60, margin, pageH));
   doc.setFont("helvetica", "bold");
   doc.text("Notes", margin, y);
   y += 16;
+
   doc.setFont("helvetica", "normal");
   const notesLines = doc.splitTextToSize(data.notes || "", pageW - margin * 2);
+  ({ y } = pdfEnsureSpace(doc, y, notesLines.length * 12 + 20, margin, pageH));
   doc.text(notesLines, margin, y);
 
   const boxWidth = pageW - margin * 2;
@@ -744,30 +885,50 @@ async function generatePDF(data) {
   boxInnerY += 22;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
+
   doc.text("Tested by:  _________________________________________", boxX + innerMargin, boxInnerY);
   doc.text("Date:  _____________________________________________", boxX + boxWidth / 2, boxInnerY);
 
   boxInnerY += 22;
-  doc.text("Compressive Strength (MPa): _____________________________________________________________________________", boxX + innerMargin, boxInnerY);
+  doc.text(
+    "Compressive Strength (MPa): _____________________________________________________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
 
   boxInnerY += 22;
   doc.text("Remarks:", boxX + innerMargin, boxInnerY);
+
   boxInnerY += 18;
-  doc.text("_____________________________________________________________________________________________________", boxX + innerMargin, boxInnerY);
+  doc.text(
+    "_____________________________________________________________________________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
+
   boxInnerY += 18;
-  doc.text("_____________________________________________________________________________________________________", boxX + innerMargin, boxInnerY);
+  doc.text(
+    "_____________________________________________________________________________________________________",
+    boxX + innerMargin,
+    boxInnerY
+  );
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text("© Concrete Laboratory, University of Lagos", pageW / 2, pageH - margin, { align: "center" });
+  doc.text("© Concrete Laboratory, University of Lagos", pageW / 2, pageH - margin, {
+    align: "center",
+  });
 
-  const filename = `${sanitizeFilename(data.clientName || "Client")}_${sanitizeFilename(data.projectSite || "CubeTest")}.pdf`;
+  const filename = `${sanitizeFilename(data.clientName || "Client")}_${sanitizeFilename(
+    data.projectSite || "CubeTest"
+  )}.pdf`;
+
   doc.save(filename);
 }
 
-/* -----------------------------
-   CSV export and clear functions
------------------------------- */
+/* -----------------------------------------------------------
+   CSV Export + Clear all
+----------------------------------------------------------- */
 
 function exportCsv() {
   const list = getLocalRecords();
@@ -797,8 +958,8 @@ function exportCsv() {
     "WaterKgm3",
     "FineKgm3",
     "CoarseKgm3",
-    "WCRatio",
-    "MixRatio",
+    "DerivedWCRatio",
+    "DerivedMixRatio",
     "Notes",
     "SavedAt",
   ];
@@ -854,9 +1015,9 @@ function clearAllRecords() {
   setStatusLine("All saved records cleared.", "info");
 }
 
-/* -----------------------------
-   Submit handler (client -> server)
------------------------------- */
+/* -----------------------------------------------------------
+   Submit handler
+----------------------------------------------------------- */
 
 async function submitForm(event) {
   event.preventDefault();
@@ -866,7 +1027,9 @@ async function submitForm(event) {
 
   const data = collectFormData();
 
-  if (!logoImageDataUrl) logoImageDataUrl = await loadImageAsDataURL("unilag-logo.png");
+  if (!logoImageDataUrl) {
+    logoImageDataUrl = await loadImageAsDataURL("unilag-logo.png");
+  }
 
   let apiResult = null;
 
@@ -902,47 +1065,45 @@ async function submitForm(event) {
   }
 }
 
-/* -----------------------------
+/* -----------------------------------------------------------
    Reset form
------------------------------- */
+----------------------------------------------------------- */
 
 function resetForm() {
   const form = document.getElementById("mix-form");
   if (!form) return;
-
   form.reset();
 
   const ratioC = document.getElementById("ratioCement");
   if (ratioC) ratioC.value = "1";
 
-  const ratioRadio = document.getElementById("modeRatio");
-  const kgRadio = document.getElementById("modeKgm3");
-  if (ratioRadio) ratioRadio.checked = true;
-  if (kgRadio) kgRadio.checked = false;
+  const adm = document.getElementById("admixtures-container");
+  const scm = document.getElementById("scms-container");
+  if (adm) adm.innerHTML = "";
+  if (scm) scm.innerHTML = "";
 
-  syncMixModeUI();
+  toggleDerivedBoxes(false);
 
-  document.getElementById("admixtures-container").innerHTML = "";
-  document.getElementById("scms-container").innerHTML = "";
+  syncConcreteTypeOther();
+  syncCementTypeOther();
+  syncModePanels();
 
-  setWcBoxVisible(false);
-  setMixBoxVisible(false);
-
-  setStatusLine("", "info");
-
+  document.querySelectorAll(".error").forEach((el) => el.classList.remove("error"));
   const errorSummary = document.getElementById("form-error-summary");
   if (errorSummary) errorSummary.style.display = "none";
+
+  setStatusLine("", "info");
 }
 
-/* -----------------------------
-   Event wiring and initialization
------------------------------- */
+/* -----------------------------------------------------------
+   Event wiring
+----------------------------------------------------------- */
 
 function attachEventListeners() {
-  const concreteGradeInput = document.getElementById("concreteGrade");
-  if (concreteGradeInput) {
-    concreteGradeInput.addEventListener("input", () => {
-      concreteGradeInput.value = concreteGradeInput.value.toUpperCase();
+  const grade = document.getElementById("concreteGrade");
+  if (grade) {
+    grade.addEventListener("input", () => {
+      grade.value = grade.value.toUpperCase();
     });
   }
 
@@ -952,18 +1113,18 @@ function attachEventListeners() {
   const resetBtn = document.getElementById("reset-form-btn");
   if (resetBtn) resetBtn.addEventListener("click", resetForm);
 
-  const exportCsvBtn = document.getElementById("export-csv-btn");
-  if (exportCsvBtn) exportCsvBtn.addEventListener("click", exportCsv);
+  const exportBtn = document.getElementById("export-csv-btn");
+  if (exportBtn) exportBtn.addEventListener("click", exportCsv);
 
   const clearAllBtn = document.getElementById("clear-all-btn");
   if (clearAllBtn) clearAllBtn.addEventListener("click", clearAllRecords);
 
-  const ratioRadio = document.getElementById("modeRatio");
-  const kgRadio = document.getElementById("modeKgm3");
-  if (ratioRadio) ratioRadio.addEventListener("change", syncMixModeUI);
-  if (kgRadio) kgRadio.addEventListener("change", syncMixModeUI);
+  const modeRatio = document.getElementById("modeRatio");
+  const modeKgm3 = document.getElementById("modeKgm3");
+  if (modeRatio) modeRatio.addEventListener("change", syncModePanels);
+  if (modeKgm3) modeKgm3.addEventListener("change", syncModePanels);
 
-  ["ratioCement", "ratioFine", "ratioCoarse", "waterCementRatio"].forEach((id) => {
+  ["ratioFine", "ratioCoarse", "waterCementRatio"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("input", updateDerivedMixValues);
   });
@@ -976,14 +1137,16 @@ function attachEventListeners() {
   const addAdmBtn = document.getElementById("add-admixture-btn");
   if (addAdmBtn) {
     addAdmBtn.addEventListener("click", () => {
-      document.getElementById("admixtures-container").appendChild(createAdmixtureRow());
+      const container = document.getElementById("admixtures-container");
+      if (container) container.appendChild(createAdmixtureRow());
     });
   }
 
   const addScmBtn = document.getElementById("add-scm-btn");
   if (addScmBtn) {
     addScmBtn.addEventListener("click", () => {
-      document.getElementById("scms-container").appendChild(createScmRow());
+      const container = document.getElementById("scms-container");
+      if (container) container.appendChild(createScmRow());
     });
   }
 
@@ -997,7 +1160,7 @@ function attachEventListeners() {
   if (tbody) {
     tbody.addEventListener("click", (e) => {
       const tr = e.target.closest("tr");
-      if (!tr || tr.dataset.index === undefined) return;
+      if (!tr || typeof tr.dataset.index === "undefined") return;
       const index = Number(tr.dataset.index);
       const list = getLocalRecords();
       const record = list[index];
@@ -1005,14 +1168,14 @@ function attachEventListeners() {
     });
   }
 
-  const appnoOverlay = document.getElementById("appno-modal");
-  const appnoCloseBtn = document.getElementById("appno-modal-close");
+  const overlay = document.getElementById("appno-modal");
+  const closeBtn = document.getElementById("appno-modal-close");
 
-  if (appnoCloseBtn) appnoCloseBtn.addEventListener("click", hideAppNumberModal);
+  if (closeBtn) closeBtn.addEventListener("click", hideAppNumberModal);
 
-  if (appnoOverlay) {
-    appnoOverlay.addEventListener("click", (e) => {
-      if (e.target === appnoOverlay) hideAppNumberModal();
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) hideAppNumberModal();
     });
   }
 
@@ -1025,9 +1188,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setDateToToday(document.getElementById("crushDate"));
   syncConcreteTypeOther();
   syncCementTypeOther();
-  syncMixModeUI();
-  setWcBoxVisible(false);
-  setMixBoxVisible(false);
+  syncModePanels(); // also disables inactive mode inputs
+  toggleDerivedBoxes(false);
   renderSavedRecords();
   attachEventListeners();
 });
