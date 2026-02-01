@@ -1,59 +1,118 @@
 import { google } from "googleapis";
 
 /* ---------------------------------------------------------------
-   HELPER: GENERATE NEXT APPLICATION NUMBER
+   UNILAG CONCRETE LAB – SUBMIT HANDLER
+   ---------------------------------------------------------------
+   - Saves Ratio mode records to: Client Master Sheet - Ratio
+   - Saves kg/m³ mode records to: Client Master Sheet - kgm3
+   - Uses application numbers:
+       * CLR-000001  (Ratio mode)
+       * CLK-000001  (kg/m³ mode)
+   - Keeps Admixtures and SCMs in their own sheets
 ---------------------------------------------------------------- */
-function nextRecordId(lastId) {
-  if (!lastId) return `UNILAG-CL-000001`;
 
-  const match = lastId.match(/^UNILAG-CL-(\d{6})$/);
-  if (!match) return `UNILAG-CL-000001`;
+/* ---------------------------------------------------------------
+   Sheet names
+---------------------------------------------------------------- */
+const SHEET_RATIO = "Client Master Sheet - Ratio";
+const SHEET_KGM3 = "Client Master Sheet - kgm3";
+const SHEET_ADMIXTURES = "Client Admixtures";
+const SHEET_SCMS = "Client SCMs";
+
+/* ---------------------------------------------------------------
+   Generate next application number
+---------------------------------------------------------------- */
+function nextRecordId(lastId, prefix) {
+  if (!lastId) return `${prefix}-000001`;
+
+  const regex = new RegExp(`^${prefix}-(\\d{6})$`);
+  const match = String(lastId).match(regex);
+
+  if (!match) return `${prefix}-000001`;
 
   let number = parseInt(match[1], 10) + 1;
+  if (!Number.isFinite(number) || number < 1) number = 1;
   if (number > 999999) number = 1;
 
-  return `UNILAG-CL-${number.toString().padStart(6, "0")}`;
+  return `${prefix}-${number.toString().padStart(6, "0")}`;
 }
 
 /* ---------------------------------------------------------------
-   HELPER: DERIVED VALUES FROM RATIO INPUTS
+   Compute derived values – Ratio mode
 ---------------------------------------------------------------- */
-function computeDerivedFromRatio(
-  ratioCement,
-  ratioFine,
-  ratioCoarse,
-  waterCementRatio
-) {
+function computeDerivedFromRatio(ratioCement, ratioFine, ratioCoarse, waterCementRatio) {
   const c = Number(ratioCement);
   const f = Number(ratioFine);
   const co = Number(ratioCoarse);
-  const wOverC = Number(waterCementRatio);
+  const wc = Number(waterCementRatio);
 
-  if (!c || c <= 0 || [f, co, wOverC].some((v) => isNaN(v))) {
+  if (!c || c <= 0 || [f, co, wc].some(Number.isNaN)) {
     return { wcRatio: 0, mixRatioString: "" };
   }
 
-  const wcRatio = wOverC; // in ratio mode, waterCementRatio *is* W/C
-  const mixRatioString = `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`;
-  return { wcRatio, mixRatioString };
+  return {
+    wcRatio: wc,
+    mixRatioString: `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`,
+  };
 }
 
 /* ---------------------------------------------------------------
-   MAIN API HANDLER – /api/submit
+   Compute derived values – kg/m³ mode
+---------------------------------------------------------------- */
+function computeDerivedFromKgm3(cementKgm3, waterKgm3, fineKgm3, coarseKgm3) {
+  const c = Number(cementKgm3);
+  const w = Number(waterKgm3);
+  const f = Number(fineKgm3);
+  const co = Number(coarseKgm3);
+
+  if (!c || c <= 0 || [w, f, co].some(Number.isNaN)) {
+    return { wcRatio: 0, mixRatioString: "" };
+  }
+
+  return {
+    wcRatio: w / c,
+    mixRatioString: `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`,
+  };
+}
+
+/* ---------------------------------------------------------------
+   Read last application number from a sheet
+---------------------------------------------------------------- */
+async function getLastRecordId(sheets, spreadsheetId, sheetName) {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!A:A`,
+  });
+
+  const rows = res.data.values || [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const cell = rows[i]?.[0];
+    if (cell && String(cell).trim()) return String(cell).trim();
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------
+   API handler – /api/submit
 ---------------------------------------------------------------- */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      message: "Method not allowed",
-    });
+    return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
   const body = req.body || {};
 
   /* -----------------------------------------------------------
-      BASIC VALIDATION – COMMON FIELDS
-     ------------------------------------------------------------ */
+     Determine input mode
+  ------------------------------------------------------------ */
+  const inputMode = body.inputMode === "kgm3" ? "kgm3" : "ratio";
+
+  const mainSheetName = inputMode === "kgm3" ? SHEET_KGM3 : SHEET_RATIO;
+  const recordPrefix = inputMode === "kgm3" ? "CLK" : "CLR";
+
+  /* -----------------------------------------------------------
+     Basic validation
+  ------------------------------------------------------------ */
   const commonRequired = [
     "clientName",
     "contactEmail",
@@ -71,11 +130,7 @@ export default async function handler(req, res) {
   ];
 
   for (const key of commonRequired) {
-    if (
-      body[key] === undefined ||
-      body[key] === null ||
-      String(body[key]).trim() === ""
-    ) {
+    if (!body[key] || String(body[key]).trim() === "") {
       return res.status(400).json({
         success: false,
         message: `Missing required field: ${key}`,
@@ -83,68 +138,30 @@ export default async function handler(req, res) {
     }
   }
 
-  // Ratio-specific required fields
-  const ratioRequired = [
-    "ratioCement",
-    "ratioFine",
-    "ratioCoarse",
-    "waterCementRatio",
-  ];
+  /* -----------------------------------------------------------
+     Mode-specific validation
+  ------------------------------------------------------------ */
+  const ratioRequired = ["ratioCement", "ratioFine", "ratioCoarse", "waterCementRatio"];
+  const kgRequired = ["cementKgm3", "waterKgm3", "fineKgm3", "coarseKgm3"];
+  const required = inputMode === "kgm3" ? kgRequired : ratioRequired;
 
-  for (const key of ratioRequired) {
-    if (
-      body[key] === undefined ||
-      body[key] === null ||
-      String(body[key]).trim?.() === ""
-    ) {
+  for (const key of required) {
+    if (!body[key] || String(body[key]).trim() === "") {
       return res.status(400).json({
         success: false,
-        message: `Missing required field (ratio): ${key}`,
+        message: `Missing required field (${inputMode}): ${key}`,
       });
     }
   }
 
   /* -----------------------------------------------------------
-      DESTRUCTURE BODY
-     ------------------------------------------------------------ */
-  const {
-    clientName,
-    contactEmail,
-    phoneNumber,
-    organisationType,
-    contactPerson,
-    projectSite,
-    crushDate,
-    concreteType,
-    cementType,
-    slump,
-    ageDays,
-    cubesCount,
-    concreteGrade,
-    notes = "",
-
-    // Ratio inputs
-    ratioCement,
-    ratioFine,
-    ratioCoarse,
-    waterCementRatio,
-
-    // Groups
-    admixtures = [],
-    scms = [],
-  } = body;
-
-  /* -----------------------------------------------------------
-      GOOGLE SHEETS AUTH
-     ------------------------------------------------------------ */
-  const sheetId = process.env.SHEET_ID;
+     Google Sheets setup
+  ------------------------------------------------------------ */
+  const spreadsheetId = process.env.SHEET_ID;
   const credentials = process.env.GOOGLE_SERVICE_CREDENTIALS;
 
-  if (!sheetId || !credentials) {
-    return res.status(500).json({
-      success: false,
-      message: "Server not configured (missing Google credentials)",
-    });
+  if (!spreadsheetId || !credentials) {
+    return res.status(500).json({ success: false, message: "Server not configured" });
   }
 
   const auth = new google.auth.GoogleAuth({
@@ -154,194 +171,123 @@ export default async function handler(req, res) {
 
   const sheets = google.sheets({ version: "v4", auth });
 
-  // RATIO-ONLY: save everything to "Client Master Sheet"
-  const mainSheetName = "Client Master Sheet";
-
   /* -----------------------------------------------------------
-      FETCH LAST APPLICATION NUMBER FROM COLUMN A
-     ------------------------------------------------------------ */
-  let lastId = null;
+     Generate application number
+  ------------------------------------------------------------ */
+  let lastId;
   try {
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: `${mainSheetName}!A:A`,
-    });
-
-    const rows = result.data.values || [];
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      const cell = row && row[0];
-      if (cell && typeof cell === "string" && cell.trim()) {
-        lastId = cell.trim();
-        break;
-      }
-    }
+    lastId = await getLastRecordId(sheets, spreadsheetId, mainSheetName);
   } catch (err) {
-    console.error("Error reading last recordId:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to read existing records",
-    });
+    return res.status(500).json({ success: false, message: "Failed to read records" });
   }
 
-  const recordId = nextRecordId(lastId);
+  const recordId = nextRecordId(lastId, recordPrefix);
   const timestamp = new Date().toISOString();
 
   /* -----------------------------------------------------------
-      DERIVE W/C RATIO + MIX RATIO STRING (FROM RATIO INPUTS)
-     ------------------------------------------------------------ */
-  const { wcRatio, mixRatioString } = computeDerivedFromRatio(
-    ratioCement,
-    ratioFine,
-    ratioCoarse,
-    waterCementRatio
-  );
+     Compute derived values
+  ------------------------------------------------------------ */
+  const derived =
+    inputMode === "kgm3"
+      ? computeDerivedFromKgm3(body.cementKgm3, body.waterKgm3, body.fineKgm3, body.coarseKgm3)
+      : computeDerivedFromRatio(body.ratioCement, body.ratioFine, body.ratioCoarse, body.waterCementRatio);
+
+  const { wcRatio, mixRatioString } = derived;
 
   /* -----------------------------------------------------------
-      BUILD MAIN ROW
-      (Adjust to match the header of "Client Master Sheet")
-      A: Record ID
-      B: Timestamp
-      C: Client / Company Name
-      D: Contact Email
-      E: Contact Phone
-      F: Organisation Type
-      G: Contact Person
-      H: Project / Site
-      I: Crushing Date
-      J: Concrete Type
-      K: Cement Type
-      L: Slump (mm)
-      M: Age (days)
-      N: Cubes Count
-      O: Concrete Grade
-      P: Ratio Cement
-      Q: Ratio Fine
-      R: Ratio Coarse
-      S: Water–Cement Ratio (input)
-      T: Notes
-     ------------------------------------------------------------ */
-  const mainRow = [
-    [
+     Build main row (same column layout in both sheets)
+  ------------------------------------------------------------ */
+  const mainRow = [[
+    recordId,
+    timestamp,
+    body.clientName,
+    body.contactEmail,
+    body.phoneNumber,
+    body.organisationType,
+    body.contactPerson,
+    body.projectSite,
+    body.crushDate,
+    body.concreteType,
+    body.cementType,
+    body.slump,
+    body.ageDays,
+    body.cubesCount,
+    body.concreteGrade,
+    body.ratioCement || "",
+    body.ratioFine || "",
+    body.ratioCoarse || "",
+    body.waterCementRatio || "",
+    body.notes || "",
+    inputMode,
+    body.cementKgm3 || "",
+    body.waterKgm3 || "",
+    body.fineKgm3 || "",
+    body.coarseKgm3 || "",
+    wcRatio,
+    mixRatioString,
+  ]];
+
+  /* -----------------------------------------------------------
+     Save main record
+  ------------------------------------------------------------ */
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${mainSheetName}!A:AA`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: mainRow },
+  });
+
+  /* -----------------------------------------------------------
+     Save admixtures
+  ------------------------------------------------------------ */
+  if (Array.isArray(body.admixtures) && body.admixtures.length) {
+    const rows = body.admixtures.map((a, i) => [
       recordId,
       timestamp,
-      clientName,
-      contactEmail,
-      phoneNumber,
-      organisationType,
-      contactPerson,
-      projectSite,
-      crushDate,
-      concreteType,
-      cementType,
-      slump,
-      ageDays,
-      cubesCount,
-      concreteGrade,
-      ratioCement,
-      ratioFine,
-      ratioCoarse,
-      waterCementRatio,
-      notes,
-    ],
-  ];
-
-  /* -----------------------------------------------------------
-      APPEND MAIN ROW
-     ------------------------------------------------------------ */
-  try {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: `${mainSheetName}!A:V`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: mainRow },
-    });
-  } catch (err) {
-    console.error("Error appending main row:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to save main record",
-    });
-  }
-
-  /* -----------------------------------------------------------
-      APPEND ADMIXTURES – SHEET: "Client Admixtures"
-      A: Record ID
-      B: Timestamp
-      C: Client Name
-      D: Index
-      E: Admixture Name
-      F: Dosage (%)
-     ------------------------------------------------------------ */
-  if (Array.isArray(admixtures) && admixtures.length > 0) {
-    const admRows = admixtures.map((a, index) => [
-      recordId,
-      timestamp,
-      clientName,
-      index + 1,
+      body.clientName,
+      i + 1,
       a.name || "",
       a.dosage || "",
     ]);
 
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: "Client Admixtures!A:F",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: admRows },
-      });
-    } catch (err) {
-      console.error("Error appending admixtures rows:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to save admixtures",
-      });
-    }
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${SHEET_ADMIXTURES}!A:F`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: rows },
+    });
   }
 
   /* -----------------------------------------------------------
-      APPEND SCMS – SHEET: "Client SCMs"
-      A: Record ID
-      B: Timestamp
-      C: Client Name
-      D: Index
-      E: SCM Name
-      F: Percent (%)
-     ------------------------------------------------------------ */
-  if (Array.isArray(scms) && scms.length > 0) {
-    const scmRows = scms.map((s, index) => [
+     Save SCMs
+  ------------------------------------------------------------ */
+  if (Array.isArray(body.scms) && body.scms.length) {
+    const rows = body.scms.map((s, i) => [
       recordId,
       timestamp,
-      clientName,
-      index + 1,
+      body.clientName,
+      i + 1,
       s.name || "",
       s.percent || "",
     ]);
 
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: "Client SCMs!A:F",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: scmRows },
-      });
-    } catch (err) {
-      console.error("Error appending SCM rows:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to save SCMs",
-      });
-    }
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${SHEET_SCMS}!A:F`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: rows },
+    });
   }
 
   /* -----------------------------------------------------------
-      SUCCESS RESPONSE
-     ------------------------------------------------------------ */
+     Success response
+  ------------------------------------------------------------ */
   return res.status(200).json({
     success: true,
-    message: "Record saved successfully",
     recordId,
     wcRatio,
     mixRatioString,
+    inputMode,
+    savedToSheet: mainSheetName,
   });
 }
