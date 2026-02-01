@@ -11,7 +11,7 @@ const SHEET_KGM3_CANDIDATES = ["Client Master Sheet - kgm3", "Client Master Shee
 const SHEET_ADMIXTURES = "Client Admixtures";
 const SHEET_SCMS = "Client SCMs";
 
-/* Safely treat empty values */
+/* Check if a value is missing */
 function isMissing(v) {
   return v === undefined || v === null || String(v).trim() === "";
 }
@@ -20,7 +20,6 @@ function isMissing(v) {
 function nextRecordId(lastId, prefix) {
   if (!lastId) return `${prefix}-000001`;
 
-  // Expected: UNILAG-CLR-000001 or UNILAG-CLK-000001
   const match = String(lastId).trim().match(new RegExp(`^${prefix}-(\\d{6})$`));
   if (!match) return `${prefix}-000001`;
 
@@ -63,7 +62,7 @@ function computeFromKgm3(c, w, f, co) {
   };
 }
 
-/* Get last record ID from Column A of a given sheet */
+/* Read last record ID from Column A of a given sheet */
 async function getLastRecordId(sheets, spreadsheetId, sheetName) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -78,32 +77,23 @@ async function getLastRecordId(sheets, spreadsheetId, sheetName) {
   return null;
 }
 
-/* Resolve a sheet tab title from candidates */
-async function resolveSheetTitle(sheets, spreadsheetId, candidates) {
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId,
-    fields: "sheets(properties(title))",
-  });
-
-  const titles = (meta.data.sheets || [])
-    .map((s) => s?.properties?.title)
-    .filter(Boolean);
-
-  // Exact match first
+/* Resolve sheet names once (single spreadsheets.get call) */
+function resolveSheetTitleFromTitles(allTitles, candidates) {
+  // Exact match
   for (const c of candidates) {
-    if (titles.includes(c)) return c;
+    if (allTitles.includes(c)) return c;
   }
 
   // Loose match (ignore slash differences)
   const norm = (x) => String(x).toLowerCase().replace(/\s+/g, " ").replace(/\//g, "").trim();
-  const normTitles = new Map(titles.map((t) => [norm(t), t]));
+  const normTitles = new Map(allTitles.map((t) => [norm(t), t]));
 
   for (const c of candidates) {
     const hit = normTitles.get(norm(c));
     if (hit) return hit;
   }
 
-  throw new Error(`No matching sheet tab found for: ${candidates.join(" | ")}`);
+  return null;
 }
 
 /* ===========================================================
@@ -183,9 +173,32 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: "v4", auth });
 
-    /* Resolve actual tab names */
-    const ratioSheet = await resolveSheetTitle(sheets, spreadsheetId, SHEET_RATIO_CANDIDATES);
-    const kgm3Sheet = await resolveSheetTitle(sheets, spreadsheetId, SHEET_KGM3_CANDIDATES);
+    /* Fetch all sheet titles once */
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: "sheets(properties(title))",
+    });
+
+    const titles = (meta.data.sheets || [])
+      .map((s) => s?.properties?.title)
+      .filter(Boolean);
+
+    const ratioSheet = resolveSheetTitleFromTitles(titles, SHEET_RATIO_CANDIDATES);
+    const kgm3Sheet = resolveSheetTitleFromTitles(titles, SHEET_KGM3_CANDIDATES);
+
+    if (!ratioSheet) {
+      return res.status(500).json({
+        success: false,
+        message: `Could not find Ratio sheet tab: ${SHEET_RATIO_CANDIDATES.join(" | ")}`,
+      });
+    }
+
+    if (!kgm3Sheet) {
+      return res.status(500).json({
+        success: false,
+        message: `Could not find kg/m³ sheet tab: ${SHEET_KGM3_CANDIDATES.join(" | ")}`,
+      });
+    }
 
     const sheetName = inputMode === "kgm3" ? kgm3Sheet : ratioSheet;
     const prefix = inputMode === "kgm3" ? "UNILAG-CLK" : "UNILAG-CLR";
@@ -195,10 +208,14 @@ export default async function handler(req, res) {
     const recordId = nextRecordId(lastId, prefix);
     const timestamp = new Date().toISOString();
 
-    /* Build row with no blank mode columns */
+    /* No cement-type transformation: store exactly what the form sends */
+    const cementType = body.cementType;
+
+    /* Build row (no blanks; and NO duplicate WC in ratio mode) */
     let wcRatio = 0;
     let mixRatioString = "";
     let row = [];
+    let appendRange = "A:V"; // kg row length
 
     if (inputMode === "ratio") {
       const derived = computeFromRatio(
@@ -207,10 +224,11 @@ export default async function handler(req, res) {
         body.ratioCoarse,
         body.waterCementRatio
       );
-      wcRatio = derived.wcRatio;
+
+      wcRatio = derived.wcRatio; // returned to frontend, but not stored as a separate column
       mixRatioString = derived.mixRatioString;
 
-      // Ratio schema (A..V)
+      // Ratio schema (A..U) — W/C stored only once as waterCementRatio
       row = [
         recordId,
         timestamp,
@@ -222,7 +240,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        body.cementType,
+        cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -230,17 +248,18 @@ export default async function handler(req, res) {
         body.ratioCement ?? 1,
         body.ratioFine,
         body.ratioCoarse,
-        body.waterCementRatio,
-        wcRatio,
+        body.waterCementRatio, // W/C stored once
         mixRatioString,
         body.notes || "",
       ];
+
+      appendRange = "A:U";
     } else {
       const derived = computeFromKgm3(body.cementKgm3, body.waterKgm3, body.fineKgm3, body.coarseKgm3);
       wcRatio = derived.wcRatio;
       mixRatioString = derived.mixRatioString;
 
-      // kg/m³ schema (A..V)
+      // kg/m³ schema (A..V) — W/C is truly derived
       row = [
         recordId,
         timestamp,
@@ -252,7 +271,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        body.cementType,
+        cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -265,12 +284,14 @@ export default async function handler(req, res) {
         mixRatioString,
         body.notes || "",
       ];
+
+      appendRange = "A:V";
     }
 
-    /* Append main record to correct sheet */
+    /* Append main record */
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:V`,
+      range: `${sheetName}!${appendRange}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [row] },
     });
@@ -326,4 +347,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: err?.message || "Server error" });
   }
 }
-
