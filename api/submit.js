@@ -4,40 +4,63 @@ import { google } from "googleapis";
    UNILAG CONCRETE LAB – SUBMIT API
    =========================================================== */
 
-/* Sheet names (must match Google Sheet tabs exactly) */
-const SHEET_RATIO = "Client Master Sheet - Ratio";
-const SHEET_KGM3 = "Client Master Sheet - kg/m3";
+/* Preferred tab names (backend will auto-pick the one that exists) */
+const SHEET_RATIO_CANDIDATES = ["Client Master Sheet - Ratio"];
+const SHEET_KGM3_CANDIDATES = ["Client Master Sheet - kg/m3"];
+
 const SHEET_ADMIXTURES = "Client Admixtures";
 const SHEET_SCMS = "Client SCMs";
 
-/* Generate next application number */
+/* Generate next application number (UNILAG-CLR / UNILAG-CLK) */
 function nextRecordId(lastId, prefix) {
   if (!lastId) return `${prefix}-000001`;
 
+  // Expect: UNILAG-CLR-000001 or UNILAG-CLK-000001
   const match = String(lastId).match(new RegExp(`^${prefix}-(\\d{6})$`));
   if (!match) return `${prefix}-000001`;
 
-  const num = parseInt(match[1], 10) + 1;
+  let num = parseInt(match[1], 10) + 1;
+  if (!Number.isFinite(num) || num < 1) num = 1;
+  if (num > 999999) num = 1;
+
   return `${prefix}-${num.toString().padStart(6, "0")}`;
 }
 
 /* Compute ratio-derived values */
 function computeFromRatio(c, f, co, wc) {
+  const C = Number(c);
+  const F = Number(f);
+  const CO = Number(co);
+  const WC = Number(wc);
+
+  if (!C || C <= 0 || [F, CO, WC].some(Number.isNaN)) {
+    return { wcRatio: 0, mixRatioString: "" };
+  }
+
   return {
-    wcRatio: wc,
-    mixRatioString: `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`,
+    wcRatio: WC,
+    mixRatioString: `1 : ${(F / C).toFixed(2)} : ${(CO / C).toFixed(2)}`,
   };
 }
 
 /* Compute kg/m³-derived values */
 function computeFromKgm3(c, w, f, co) {
+  const C = Number(c);
+  const W = Number(w);
+  const F = Number(f);
+  const CO = Number(co);
+
+  if (!C || C <= 0 || [W, F, CO].some(Number.isNaN)) {
+    return { wcRatio: 0, mixRatioString: "" };
+  }
+
   return {
-    wcRatio: w / c,
-    mixRatioString: `1 : ${(f / c).toFixed(2)} : ${(co / c).toFixed(2)}`,
+    wcRatio: W / C,
+    mixRatioString: `1 : ${(F / C).toFixed(2)} : ${(CO / C).toFixed(2)}`,
   };
 }
 
-/* Get last record ID from a sheet */
+/* Read last record ID from Column A */
 async function getLastRecordId(sheets, spreadsheetId, sheetName) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -46,206 +69,53 @@ async function getLastRecordId(sheets, spreadsheetId, sheetName) {
 
   const rows = res.data.values || [];
   for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i]?.[0]) return rows[i][0];
+    const cell = rows[i]?.[0];
+    if (cell && String(cell).trim()) return String(cell).trim();
   }
   return null;
+}
+
+/* Pick the first sheet title that exists from a list of candidates */
+async function resolveSheetTitle(sheets, spreadsheetId, candidates) {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets(properties(title))",
+  });
+
+  const titles = (meta.data.sheets || [])
+    .map((s) => s?.properties?.title)
+    .filter(Boolean);
+
+  // exact match
+  for (const c of candidates) {
+    if (titles.includes(c)) return c;
+  }
+
+  // fallback: loose match (case-insensitive + ignores / vs nothing)
+  const norm = (x) => String(x).toLowerCase().replace(/\s+/g, " ").replace(/\//g, "").trim();
+  const normTitles = new Map(titles.map((t) => [norm(t), t]));
+
+  for (const c of candidates) {
+    const hit = normTitles.get(norm(c));
+    if (hit) return hit;
+  }
+
+  throw new Error(`No matching sheet tab found for: ${candidates.join(" | ")}`);
+}
+
+/* Safe required-field check (doesn't reject numbers like 0 incorrectly) */
+function isMissing(v) {
+  return v === undefined || v === null || String(v).trim() === "";
 }
 
 /* ===========================================================
    API HANDLER
    =========================================================== */
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ success: false, message: "Method not allowed" });
-  }
-
-  const body = req.body || {};
-  const inputMode = body.inputMode === "kgm3" ? "kgm3" : "ratio";
-
-  const sheetName = inputMode === "kgm3" ? SHEET_KGM3 : SHEET_RATIO;
-  const prefix = inputMode === "kgm3" ? "CLK" : "CLR";
-
-  /* Validate common fields */
-  const requiredCommon = [
-    "clientName",
-    "contactEmail",
-    "phoneNumber",
-    "organisationType",
-    "contactPerson",
-    "projectSite",
-    "crushDate",
-    "concreteType",
-    "cementType",
-    "slump",
-    "ageDays",
-    "cubesCount",
-    "concreteGrade",
-  ];
-
-  for (const key of requiredCommon) {
-    if (!body[key]) {
-      return res.status(400).json({ success: false, message: `Missing field: ${key}` });
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, message: "Method not allowed" });
     }
-  }
 
-  /* Validate mode-specific fields */
-  if (inputMode === "ratio") {
-    if (!body.ratioFine || !body.ratioCoarse || !body.waterCementRatio) {
-      return res.status(400).json({ success: false, message: "Missing ratio values" });
-    }
-  } else {
-    if (!body.cementKgm3 || !body.waterKgm3 || !body.fineKgm3 || !body.coarseKgm3) {
-      return res.status(400).json({ success: false, message: "Missing kg/m³ values" });
-    }
-  }
-
-  /* Google Sheets setup */
-  const spreadsheetId = process.env.SHEET_ID;
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_CREDENTIALS);
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-
-  const sheets = google.sheets({ version: "v4", auth });
-
-  /* Generate application number */
-  const lastId = await getLastRecordId(sheets, spreadsheetId, sheetName);
-  const recordId = nextRecordId(lastId, prefix);
-  const timestamp = new Date().toISOString();
-
-  const cementType = normalizeCementType(body.cementType);
-
-  /* Build row */
-  let wcRatio, mixRatioString, row;
-
-  if (inputMode === "ratio") {
-    const derived = computeFromRatio(
-      body.ratioCement ?? 1,
-      body.ratioFine,
-      body.ratioCoarse,
-      body.waterCementRatio
-    );
-
-    wcRatio = derived.wcRatio;
-    mixRatioString = derived.mixRatioString;
-
-    row = [
-      recordId,
-      timestamp,
-      body.clientName,
-      body.contactEmail,
-      body.phoneNumber,
-      body.organisationType,
-      body.contactPerson,
-      body.projectSite,
-      body.crushDate,
-      body.concreteType,
-      cementType,
-      body.slump,
-      body.ageDays,
-      body.cubesCount,
-      body.concreteGrade,
-      body.ratioCement ?? 1,
-      body.ratioFine,
-      body.ratioCoarse,
-      body.waterCementRatio,
-      wcRatio,
-      mixRatioString,
-      body.notes || "",
-    ];
-  } else {
-    const derived = computeFromKgm3(
-      body.cementKgm3,
-      body.waterKgm3,
-      body.fineKgm3,
-      body.coarseKgm3
-    );
-
-    wcRatio = derived.wcRatio;
-    mixRatioString = derived.mixRatioString;
-
-    row = [
-      recordId,
-      timestamp,
-      body.clientName,
-      body.contactEmail,
-      body.phoneNumber,
-      body.organisationType,
-      body.contactPerson,
-      body.projectSite,
-      body.crushDate,
-      body.concreteType,
-      cementType,
-      body.slump,
-      body.ageDays,
-      body.cubesCount,
-      body.concreteGrade,
-      body.cementKgm3,
-      body.waterKgm3,
-      body.fineKgm3,
-      body.coarseKgm3,
-      wcRatio,
-      mixRatioString,
-      body.notes || "",
-    ];
-  }
-
-  /* Save main record */
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: `${sheetName}!A:V`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [row] },
-  });
-
-  /* Save admixtures */
-  if (Array.isArray(body.admixtures) && body.admixtures.length) {
-    const rows = body.admixtures.map((a, i) => [
-      recordId,
-      timestamp,
-      body.clientName,
-      i + 1,
-      a.name || "",
-      a.dosage || "",
-    ]);
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${SHEET_ADMIXTURES}!A:F`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: rows },
-    });
-  }
-
-  /* Save SCMs */
-  if (Array.isArray(body.scms) && body.scms.length) {
-    const rows = body.scms.map((s, i) => [
-      recordId,
-      timestamp,
-      body.clientName,
-      i + 1,
-      s.name || "",
-      s.percent || "",
-    ]);
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${SHEET_SCMS}!A:F`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: rows },
-    });
-  }
-
-  /* Done */
-  return res.status(200).json({
-    success: true,
-    recordId,
-    wcRatio,
-    mixRatioString,
-    inputMode,
-    savedToSheet: sheetName,
-  });
-}
-
+    const body = req.body || {};
+    const inputMode = body.inputMode === "
