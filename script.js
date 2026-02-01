@@ -139,19 +139,6 @@ function createScmRow(data = {}) {
 }
 
 /* -----------------------------------------------------------
-   Enable/Disable panel inputs
------------------------------------------------------------ */
-
-function setPanelEnabled(panelId, enabled) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-
-  panel.querySelectorAll("input, select, textarea").forEach((el) => {
-    el.disabled = !enabled;
-  });
-}
-
-/* -----------------------------------------------------------
    Input Mode (Ratio vs kg/m³)
 ----------------------------------------------------------- */
 
@@ -163,6 +150,38 @@ function getSelectedInputMode() {
   return "ratio";
 }
 
+/* -----------------------------------------------------------
+   OPTIONAL SAFETY:
+   Clear inactive mode values when switching modes
+   (Prevents accidentally submitting both modes)
+----------------------------------------------------------- */
+
+function clearPanelValues(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  panel.querySelectorAll("input, select, textarea").forEach((el) => {
+    const tag = el.tagName.toLowerCase();
+    const type = (el.getAttribute("type") || "").toLowerCase();
+
+    // Keep ratio cement fixed at 1
+    if (el.id === "ratioCement") {
+      el.value = "1";
+      return;
+    }
+
+    // Reset radios/checkboxes carefully (none exist inside these panels right now, but safe)
+    if (type === "radio" || type === "checkbox") {
+      el.checked = false;
+      return;
+    }
+
+    // For other inputs/selects/textareas
+    if (tag === "select") el.selectedIndex = 0;
+    else el.value = "";
+  });
+}
+
 function syncModePanels() {
   const mode = getSelectedInputMode();
   const ratioPanel = document.getElementById("ratioInputs");
@@ -171,11 +190,15 @@ function syncModePanels() {
   if (ratioPanel) ratioPanel.style.display = mode === "ratio" ? "" : "none";
   if (kgPanel) kgPanel.style.display = mode === "kgm3" ? "" : "none";
 
-  // Disable inactive panel inputs (prevents accidental submission)
-  setPanelEnabled("ratioInputs", mode === "ratio");
-  setPanelEnabled("kgm3Inputs", mode === "kgm3");
+  // Optional-only behaviour you asked for:
+  // When you switch to one mode, we CLEAR the other mode's values
+  if (mode === "ratio") {
+    clearPanelValues("kgm3Inputs");
+  } else {
+    clearPanelValues("ratioInputs");
+  }
 
-  // Refresh derived values
+  // Refresh derived values display based on active mode
   updateDerivedMixValues();
 }
 
@@ -211,11 +234,6 @@ function setMixBoxVisible(visible) {
   const box = document.getElementById("mixratio-box");
   if (!box) return;
   box.classList.toggle("is-visible", !!visible);
-}
-
-function toggleDerivedBoxes(visible) {
-  setWcBoxVisible(visible);
-  setMixBoxVisible(visible);
 }
 
 function normalizeRatioText(n) {
@@ -297,6 +315,7 @@ function updateDerivedMixValues() {
 
   const { wcRatio, mixRatioString } = derived;
 
+  // W/C
   if (wcSpan && typeof wcRatio === "number" && Number.isFinite(wcRatio)) {
     wcSpan.textContent = wcRatio.toFixed(2);
     setWcBoxVisible(true);
@@ -305,6 +324,7 @@ function updateDerivedMixValues() {
     setWcBoxVisible(false);
   }
 
+  // Mix ratio
   if (mixSpan && mixRatioString) {
     mixSpan.textContent = mixRatioString;
     setMixBoxVisible(true);
@@ -344,7 +364,7 @@ function validateForm() {
     "concreteGrade",
   ];
 
-  const ratioRequired = ["ratioFine", "ratioCoarse", "waterCementRatio"]; // ratioCement fixed at 1
+  const ratioRequired = ["ratioFine", "ratioCoarse", "waterCementRatio"]; // ratioCement fixed
   const kgRequired = ["cementKgm3", "waterKgm3", "fineKgm3", "coarseKgm3"];
 
   const missing = [];
@@ -360,7 +380,6 @@ function validateForm() {
   function checkId(id) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (el.disabled) return; // Do not validate disabled inputs (inactive mode)
     if (!String(el.value).trim()) markBad(el, id);
   }
 
@@ -415,6 +434,8 @@ function validateForm() {
 
 /* -----------------------------------------------------------
    Collect form data
+   (Because we clear inactive panel values on switch,
+    only the active mode will have data at submit time.)
 ----------------------------------------------------------- */
 
 function collectFormData() {
@@ -428,7 +449,7 @@ function collectFormData() {
     cementType = document.getElementById("cementTypeOther")?.value.trim() || "";
   }
 
-  // Compatibility normalization
+  // Compatibility mapping
   if (cementType === "Blended (CEMII)") cementType = "Blended";
 
   const admixtures = [];
@@ -447,41 +468,6 @@ function collectFormData() {
 
   const inputMode = getSelectedInputMode();
   const { wcRatio, mixRatioString } = updateDerivedMixValues();
-
-  // Mode-specific fields (only active mode is sent)
-  let ratioCement = "";
-  let ratioFine = "";
-  let ratioCoarse = "";
-  let waterCementRatio = "";
-
-  let cementKgm3 = "";
-  let waterKgm3 = "";
-  let fineKgm3 = "";
-  let coarseKgm3 = "";
-
-  if (inputMode === "ratio") {
-    ratioCement = Number(document.getElementById("ratioCement")?.value || 1);
-    ratioFine = Number(document.getElementById("ratioFine")?.value || 0);
-    ratioCoarse = Number(document.getElementById("ratioCoarse")?.value || 0);
-    waterCementRatio = Number(document.getElementById("waterCementRatio")?.value || 0);
-
-    // Ensure kg/m³ fields are not sent
-    cementKgm3 = "";
-    waterKgm3 = "";
-    fineKgm3 = "";
-    coarseKgm3 = "";
-  } else {
-    cementKgm3 = Number(document.getElementById("cementKgm3")?.value || 0);
-    waterKgm3 = Number(document.getElementById("waterKgm3")?.value || 0);
-    fineKgm3 = Number(document.getElementById("fineKgm3")?.value || 0);
-    coarseKgm3 = Number(document.getElementById("coarseKgm3")?.value || 0);
-
-    // Ensure ratio fields are not sent
-    ratioCement = "";
-    ratioFine = "";
-    ratioCoarse = "";
-    waterCementRatio = "";
-  }
 
   return {
     inputMode,
@@ -503,23 +489,21 @@ function collectFormData() {
     concreteGrade: document.getElementById("concreteGrade")?.value.trim() || "",
     notes: document.getElementById("notes")?.value.trim() || "",
 
-    // Ratio (active only)
-    ratioCement,
-    ratioFine,
-    ratioCoarse,
-    waterCementRatio,
+    // Ratio (will be blank if mode is kgm3 because we clear on switch)
+    ratioCement: Number(document.getElementById("ratioCement")?.value || 1),
+    ratioFine: Number(document.getElementById("ratioFine")?.value || 0),
+    ratioCoarse: Number(document.getElementById("ratioCoarse")?.value || 0),
+    waterCementRatio: Number(document.getElementById("waterCementRatio")?.value || 0),
 
-    // kg/m³ (active only)
-    cementKgm3,
-    waterKgm3,
-    fineKgm3,
-    coarseKgm3,
+    // kg/m³ (will be blank if mode is ratio because we clear on switch)
+    cementKgm3: Number(document.getElementById("cementKgm3")?.value || 0),
+    waterKgm3: Number(document.getElementById("waterKgm3")?.value || 0),
+    fineKgm3: Number(document.getElementById("fineKgm3")?.value || 0),
+    coarseKgm3: Number(document.getElementById("coarseKgm3")?.value || 0),
 
-    // Dynamic groups
     admixtures,
     scms,
 
-    // Derived
     wcRatio,
     mixRatioString,
   };
@@ -659,6 +643,9 @@ function loadRecordIntoForm(r) {
   if (ratioRadio) ratioRadio.checked = mode === "ratio";
   if (kgRadio) kgRadio.checked = mode === "kgm3";
 
+  // IMPORTANT:
+  // We set values first, then call syncModePanels() which will clear the inactive panel.
+  // That keeps the form consistent with the record's mode.
   document.getElementById("ratioCement").value = r.ratioCement ?? "1";
   document.getElementById("ratioFine").value = r.ratioFine ?? "";
   document.getElementById("ratioCoarse").value = r.ratioCoarse ?? "";
@@ -668,7 +655,6 @@ function loadRecordIntoForm(r) {
   const waterKgm3 = document.getElementById("waterKgm3");
   const fineKgm3 = document.getElementById("fineKgm3");
   const coarseKgm3 = document.getElementById("coarseKgm3");
-
   if (cementKgm3) cementKgm3.value = r.cementKgm3 ?? "";
   if (waterKgm3) waterKgm3.value = r.waterKgm3 ?? "";
   if (fineKgm3) fineKgm3.value = r.fineKgm3 ?? "";
@@ -812,7 +798,7 @@ async function generatePDF(data) {
   const wcRatioText =
     typeof data.wcRatio === "number" && Number.isFinite(data.wcRatio)
       ? data.wcRatio.toFixed(2)
-      : data.wcRatio || "";
+      : (data.wcRatio || "");
 
   ({ y } = pdfEnsureSpace(doc, y, 40, margin, pageH));
   doc.text(`Derived W/C Ratio: ${wcRatioText}`, margin, y);
@@ -915,9 +901,7 @@ async function generatePDF(data) {
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text("© Concrete Laboratory, University of Lagos", pageW / 2, pageH - margin, {
-    align: "center",
-  });
+  doc.text("© Concrete Laboratory, University of Lagos", pageW / 2, pageH - margin, { align: "center" });
 
   const filename = `${sanitizeFilename(data.clientName || "Client")}_${sanitizeFilename(
     data.projectSite || "CubeTest"
@@ -1041,11 +1025,13 @@ async function submitForm(event) {
     });
 
     if (res.ok) apiResult = await res.json();
+    else apiResult = await res.json().catch(() => null);
   } catch (err) {
-    console.error("Network error submitting to API:", err);
+    console.error("Network/API error:", err);
   }
 
   if (apiResult && apiResult.success) {
+    // Backend is the source of truth for recordId, wcRatio, mixRatioString, inputMode routing
     if (typeof apiResult.wcRatio !== "undefined") data.wcRatio = apiResult.wcRatio;
     if (typeof apiResult.mixRatioString !== "undefined") data.mixRatioString = apiResult.mixRatioString;
     if (apiResult.recordId) data.recordId = apiResult.recordId;
@@ -1061,7 +1047,8 @@ async function submitForm(event) {
 
     setStatusLine("Submitted and saved successfully.", "success");
   } else {
-    setStatusLine("Failed to submit. Please try again.", "error");
+    const msg = apiResult?.message ? `Failed: ${apiResult.message}` : "Failed to submit. Please try again.";
+    setStatusLine(msg, "error");
   }
 }
 
@@ -1082,7 +1069,8 @@ function resetForm() {
   if (adm) adm.innerHTML = "";
   if (scm) scm.innerHTML = "";
 
-  toggleDerivedBoxes(false);
+  setWcBoxVisible(false);
+  setMixBoxVisible(false);
 
   syncConcreteTypeOther();
   syncCementTypeOther();
@@ -1184,12 +1172,17 @@ function attachEventListeners() {
   });
 }
 
+/* -----------------------------------------------------------
+   Init
+----------------------------------------------------------- */
+
 document.addEventListener("DOMContentLoaded", () => {
   setDateToToday(document.getElementById("crushDate"));
   syncConcreteTypeOther();
   syncCementTypeOther();
-  syncModePanels(); // also disables inactive mode inputs
-  toggleDerivedBoxes(false);
+  syncModePanels();
+  setWcBoxVisible(false);
+  setMixBoxVisible(false);
   renderSavedRecords();
   attachEventListeners();
 });
