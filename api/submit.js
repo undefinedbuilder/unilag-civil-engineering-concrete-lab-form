@@ -10,12 +10,6 @@ const SHEET_KGM3 = "Client Master Sheet - kg/m3";
 const SHEET_ADMIXTURES = "Client Admixtures";
 const SHEET_SCMS = "Client SCMs";
 
-/* Normalize cement label */
-function normalizeCementType(value) {
-  if (value === "Blended (CEMII)") return "Blended";
-  return String(value || "").trim();
-}
-
 /* Generate next application number */
 function nextRecordId(lastId, prefix) {
   if (!lastId) return `${prefix}-000001`;
@@ -254,3 +248,4 @@ export default async function handler(req, res) {
     savedToSheet: sheetName,
   });
 }
+
