@@ -208,9 +208,6 @@ export default async function handler(req, res) {
     const recordId = nextRecordId(lastId, prefix);
     const timestamp = new Date().toISOString();
 
-    /* No cement-type transformation: store exactly what the form sends */
-    const cementType = body.cementType;
-
     /* Build row (no blanks; and NO duplicate WC in ratio mode) */
     let wcRatio = 0;
     let mixRatioString = "";
@@ -240,7 +237,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        cementType,
+        body.cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -271,7 +268,7 @@ export default async function handler(req, res) {
         body.projectSite,
         body.crushDate,
         body.concreteType,
-        cementType,
+        body.cementType,
         body.slump,
         body.ageDays,
         body.cubesCount,
@@ -347,4 +344,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: err?.message || "Server error" });
   }
 }
+
 
