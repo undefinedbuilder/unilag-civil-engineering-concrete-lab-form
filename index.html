@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Page metadata and dependencies -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="unilag-logo.png" />
   <title>UNILAG Client Cube Test Form</title>
 
+  <!-- Main styles -->
   <link rel="stylesheet" href="style.css" />
+
   <!-- jsPDF for PDF generation -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
   <!-- Main front-end logic -->
   <script src="script.js" defer></script>
 </head>
 
 <body>
   <main class="container">
-    <!-- HEADER -->
+    <!-- Header section -->
     <header class="header">
       <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
 
@@ -31,14 +35,14 @@
       </p>
     </header>
 
-    <!-- MAIN GRID -->
+    <!-- Main two-column layout -->
     <div class="main-grid">
-      <!-- FORM -->
+      <!-- Client cube test form -->
       <section class="card">
         <h3>Client Cube Test Form</h3>
 
         <form id="mix-form">
-          <!-- CLIENT AND PROJECT DETAILS -->
+          <!-- Client & project details -->
           <h4 class="section-title">Client &amp; Project Details</h4>
 
           <div class="grid two">
@@ -99,7 +103,7 @@
             </label>
           </div>
 
-          <!-- MIX DESIGN OVERVIEW -->
+          <!-- Mix design overview -->
           <h4 class="section-title">Mix Design Overview</h4>
 
           <div class="grid two">
@@ -125,6 +129,7 @@
               </select>
             </label>
 
+            <!-- Concrete type "Other" -->
             <label id="concreteTypeOtherWrapper" style="display: none;">
               <span class="label-line">
                 Specify Concrete Type <span class="required-asterisk">*</span>
@@ -138,14 +143,15 @@
               </span>
               <select id="cementType">
                 <option value="">-- Select --</option>
+                <option>Portland Limestone Cement</option>
                 <option>Ordinary Portland Cement</option>
                 <option>Rapid Hardening Cement</option>
-                <option>Portland Limestone Cement</option>
-                <option>Blended (CEM II)</option>
+                <option>Blended</option>
                 <option>Other</option>
               </select>
             </label>
 
+            <!-- Cement type "Other" -->
             <label id="cementTypeOtherWrapper" style="display: none;">
               <span class="label-line">
                 Specify Cement Type <span class="required-asterisk">*</span>
@@ -182,87 +188,111 @@
             </label>
 
             <label>
-              <span class="label-line">
-                General Notes / Site Information
-              </span>
-              <textarea
-                id="notes"
-                rows="3"
-              ></textarea>
+              <span class="label-line">General Notes / Site Information</span>
+              <textarea id="notes" rows="3"></textarea>
             </label>
           </div>
 
-          <!-- MATERIAL QUANTITIES -->
-          <h4 id="ratioHeading" class="section-title">
-            Mix (Cement : Fine : Coarse) &amp; W/C Ratio
-          </h4>
+          <!-- MIX INPUT MODE heading -->
+          <h4 class="section-title">Mix Input Mode</h4>
 
-          <div id="ratioInputs">
-            <!-- Cement : Fine : Coarse -->
+          <!-- Mode selector (ratio vs kg/m³) -->
+          <div class="mix-mode-wrap" role="group" aria-label="Mix input mode">
+            <div class="mix-mode-toggle">
+              <label class="mix-mode-pill">
+                <input type="radio" name="mixInputMode" id="modeRatio" value="ratio" checked />
+                <span class="mix-mode-pill-title">Mix Ratio</span>
+                <span class="mix-mode-pill-sub">Enter cement:fine:coarse + W/C</span>
+              </label>
+
+              <label class="mix-mode-pill">
+                <input type="radio" name="mixInputMode" id="modeKgm3" value="kgm3" />
+                <span class="mix-mode-pill-title">kg/m³</span>
+                <span class="mix-mode-pill-sub">Enter material quantities per m³</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Mix design input fields -->
+          <h4 class="section-title">Mix Design Input</h4>
+
+          <!-- Mix ratio inputs -->
+          <div id="ratioInputs" class="mix-mode-panel">
+            <h4 class="subsection-title">Mix (Cement : Fine : Coarse) &amp; W/C Ratio</h4>
+
             <div class="ratio-line">
               <label>
                 <span class="label-line">
                   Cement <span class="required-asterisk">*</span>
                 </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  id="ratioCement"
-                  value="1"
-                  readonly
-                />
+                <input type="number" min="0" step="0.01" id="ratioCement" value="1" readonly />
               </label>
 
               <span class="ratio-separator">:</span>
 
               <label>
                 <span class="label-line">
-                  Fine Aggregate
-                  <span class="required-asterisk">*</span>
+                  Fine Aggregate <span class="required-asterisk">*</span>
                 </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  id="ratioFine"
-                />
+                <input type="number" min="0" step="0.01" id="ratioFine" />
               </label>
 
               <span class="ratio-separator">:</span>
 
               <label>
                 <span class="label-line">
-                  Coarse Aggregate
-                  <span class="required-asterisk">*</span>
+                  Coarse Aggregate <span class="required-asterisk">*</span>
                 </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  id="ratioCoarse"
-                />
+                <input type="number" min="0" step="0.01" id="ratioCoarse" />
               </label>
             </div>
 
             <div class="wc-input-line">
               <label>
                 <span class="label-line">
-                  Water–Cement Ratio (W/C)
-                  <span class="required-asterisk">*</span>
+                  Water–Cement Ratio (W/C) <span class="required-asterisk">*</span>
                 </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  id="waterCementRatio"
-                  placeholder="e.g. 0.50"
-                />
+                <input type="number" min="0" step="0.01" id="waterCementRatio" placeholder="e.g. 0.50" />
               </label>
             </div>
           </div>
 
-          <!-- DERIVED W/C & MIX RATIO -->
+          <!-- kg/m³ inputs -->
+          <div id="kgm3Inputs" class="mix-mode-panel" style="display:none;">
+            <h4 class="subsection-title">Material Quantities (kg/m³)</h4>
+
+            <div class="grid two">
+              <label>
+                <span class="label-line">
+                  Cement (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="cementKgm3" placeholder="e.g. 350" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Water (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="waterKgm3" placeholder="e.g. 175" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Fine Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="fineKgm3" placeholder="e.g. 650" />
+              </label>
+
+              <label>
+                <span class="label-line">
+                  Coarse Aggregate (kg/m³) <span class="required-asterisk">*</span>
+                </span>
+                <input type="number" min="0" step="0.1" id="coarseKgm3" placeholder="e.g. 1100" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Derived display boxes -->
           <div id="wcratio-box" class="wc-box">
             <strong>Water–Cement Ratio:</strong>
             <span id="wcRatioValue">0.00</span>
@@ -273,7 +303,7 @@
             <span id="mixRatioValue">–</span>
           </div>
 
-          <!-- CHEMICAL ADMIXTURES -->
+          <!-- Chemical admixtures -->
           <h4 class="section-title">Chemical Admixtures</h4>
 
           <div id="admixtures-container" class="dynamic-group"></div>
@@ -282,7 +312,7 @@
             + Add Admixture
           </button>
 
-          <!-- PARTIAL CEMENT REPLACEMENTS -->
+          <!-- Partial cement replacements -->
           <h4 class="section-title">Partial Cement Replacements (SCMs)</h4>
 
           <div id="scms-container" class="dynamic-group"></div>
@@ -291,7 +321,7 @@
             + Add SCM
           </button>
 
-          <!-- ACTIONS AND STATUS -->
+          <!-- Form actions -->
           <div class="actions two-cols">
             <button type="submit" id="save-mix-btn" class="btn-submit">
               Submit, Save &amp; Generate PDF
@@ -302,12 +332,11 @@
           </div>
 
           <div id="form-error-summary" class="error-summary"></div>
-
           <p id="status-line" class="status-pill" style="display: none;"></p>
         </form>
       </section>
 
-      <!-- SAVED MIXES TABLE -->
+      <!-- Saved mixes table -->
       <section class="card">
         <h3>Saved Client Mixes</h3>
 
@@ -332,12 +361,14 @@
             </tbody>
           </table>
         </div>
+
         <p class="subtle small-note">
           Click a row to load that mix back into the form.
         </p>
       </section>
     </div>
   </main>
+
   <!-- Application Number Modal -->
   <div id="appno-modal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card">
@@ -345,11 +376,11 @@
       <p class="modal-text">Your application number is:</p>
 
       <div class="modal-appno" id="appno-modal-number">
-        UNILAG-CL-000001
+        UNILAG-CLR-000001
       </div>
 
       <p class="modal-subtext">
-         Please keep this number safe and quote it in all discussions with the Concrete Laboratory.
+        Please keep this number safe and quote it in all discussions with the Concrete Laboratory.
       </p>
 
       <button type="button" class="btn-primary" id="appno-modal-close">
@@ -357,13 +388,10 @@
       </button>
     </div>
   </div>
-  <!-- FOOTER -->
+
+  <!-- Footer -->
   <footer>
-  © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
+    © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
   </footer>
 </body>
 </html>
-
-
-
-
