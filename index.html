@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Page metadata -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Favicon / tab icon -->
-  <link rel="icon" type="image/png" href="unilag-logo.png" />
-  <link rel="apple-touch-icon" href="unilag-logo.png" />
-  <meta name="theme-color" content="#00723c" />
-
   <title>UNILAG Concrete Laboratory</title>
 
-  <!-- Same stylesheet as the form -->
+  <!-- Favicon (use a circular PNG for best look) -->
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
+
+  <!-- Same stylesheet used by the form -->
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <main class="container">
-    <!-- Same header style as the form -->
+
+    <!-- Header (same visual style, not same IDs) -->
     <header class="header">
       <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
 
@@ -29,73 +28,89 @@
       </div>
 
       <p class="notice">
-        Welcome. This portal helps you <strong>submit cube test/mix requests</strong> and
-        <strong>check results</strong> using your application number.
+        This portal routes concrete cube submissions for
+        <strong>commercial</strong> and <strong>research (student)</strong> testing.
       </p>
     </header>
 
-    <!-- Simple home layout -->
-    <div class="home-grid">
+    <!-- Main content -->
+    <section class="main-grid">
+
       <!-- About + Quick Guide -->
-      <section class="card">
-        <h3>About This Portal</h3>
+      <div class="card">
+        <h3>About the Laboratory</h3>
 
-        <p class="home-intro">
-          The UNILAG Concrete Laboratory supports concrete testing and mix documentation for
-          research and commercial engagements. Use the two options below to submit details or
-          check outcomes.
+        <p class="subtle">
+          The UNILAG Concrete Laboratory provides facilities for concrete mix design,
+          cube testing, and documentation for both professional practice and academic research.
         </p>
 
-        <div class="home-guide">
-          <h4 class="section-title">Quick Guide</h4>
-          <ol class="guide-list">
-            <li>
-              Click <strong>Submit a Request</strong> to complete the form and generate your application number.
-            </li>
-            <li>
-              Save your application number (e.g., <strong>UNILAG-CLR-000001</strong>).
-            </li>
-            <li>
-              Click <strong>Check Results</strong> and enter your application number to view status/results.
-            </li>
-          </ol>
-          <p class="subtle">
-            Tip: If you can’t find your application number, check the PDF generated at submission or your saved records.
-          </p>
-        </div>
-      </section>
+        <div class="section-title">Quick Guide</div>
+        <ol class="subtle" style="margin: 8px 0 0 18px;">
+          <li>
+            <strong>Commercial / consultancy tests:</strong>
+            use the main submission form.
+          </li>
+          <li>
+            <strong>Students &amp; research cube tests:</strong>
+            use the research portal.
+          </li>
+          <li>
+            Always save your <strong>Application Number</strong> to track results.
+          </li>
+        </ol>
 
-      <!-- Actions -->
-      <section class="card">
-        <h3>Navigation</h3>
-
-        <div class="action-cards">
-          <div class="mini-card">
-            <h4 class="mini-title">Submit a Request</h4>
-            <p class="mini-text">
-              Fill the Client Cube Test Form and generate an application number.
-            </p>
-            <a class="btn-primary" href="form.html">Go to Form</a>
-          </div>
-
-          <div class="mini-card">
-            <h4 class="mini-title">Check Results</h4>
-            <p class="mini-text">
-              View results/status using your application number.
-            </p>
-            <!-- Change results.html if your page has a different name -->
-            <a class="btn-primary outline" href="results.html">Check Results</a>
-          </div>
-        </div>
-
-        <p class="subtle small-note">
-          If your results page is not <strong>results.html</strong>, rename the link above to your actual file.
+        <p class="subtle" style="margin-top: 10px;">
+          Choosing the correct route ensures faster processing and proper record keeping.
         </p>
-      </section>
-    </div>
+      </div>
+
+      <!-- Navigation / Routing -->
+      <div class="card">
+        <h3>Choose a Route</h3>
+
+        <!-- Commercial -->
+        <div class="section-title">Commercial / Consultancy Testing</div>
+        <p class="subtle" style="margin-top: 6px;">
+          For industry partners, consultants, and non-student submissions.
+        </p>
+        <a class="btn-primary" href="form.html">
+          Submit Commercial Request
+        </a>
+
+        <!-- Research -->
+        <div class="section-title" style="margin-top: 16px;">
+          Student / Research Cube Testing
+        </div>
+        <p class="subtle" style="margin-top: 6px;">
+          For undergraduate and postgraduate research cube tests.
+        </p>
+        <a
+          class="btn-primary outline"
+          href="https://unilagresearchconcretelab.vercel.app"
+          target="_blank"
+          rel="noopener"
+        >
+          Go to Research Portal
+        </a>
+
+        <!-- Results -->
+        <div class="section-title" style="margin-top: 16px;">
+          Check Results
+        </div>
+        <p class="subtle" style="margin-top: 6px;">
+          Track submissions using your application number.
+        </p>
+        <!-- Rename if your file is different -->
+        <a class="btn-primary outline" href="results.html">
+          Check Results
+        </a>
+      </div>
+
+    </section>
   </main>
 
-  <!-- Same footer text as the form (exact line) -->
+  <!-- EXACT same footer as the form -->
   <footer>
     © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
   </footer>
