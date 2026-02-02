@@ -5,18 +5,15 @@
   --unilag-blue: #77bfe8;
   --unilag-blue-soft: #e5f3fb;
   --accent-gold: #f1b21c;
-  --danger: #c62828;
 
-  --text-main: #222222;
+  --text-main: #1f2937;
   --text-muted: #6b7280;
 
   --border-soft: #d1d5db;
   --bg-main: #f3f4f6;
   --bg-card: #ffffff;
-  --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
 
-  --white: #ffffff;
-  --gray-soft: #f9fafb;
+  --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
 
   --radius-lg: 18px;
   --radius-pill: 999px;
@@ -91,7 +88,7 @@ body {
   width: 84px;
   height: auto;
   border-radius: 999px;
-  background: var(--white);
+  background: #ffffff;
   padding: 8px;
   box-shadow: 0 0 0 2px rgba(248, 250, 252, 0.5);
   z-index: 1;
@@ -103,6 +100,7 @@ body {
   flex-direction: column;
   gap: 2px;
   z-index: 1;
+  min-width: 0;
 }
 
 .header-university {
@@ -125,17 +123,6 @@ body {
   letter-spacing: 0.08em;
 }
 
-.notice {
-  flex-basis: 100%;
-  margin: 4px 0 0;
-  font-size: 0.75rem;
-  background: rgba(248, 250, 252, 0.14);
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(248, 250, 252, 0.35);
-  z-index: 1;
-}
-
 /* Heading: Cards */
 .card {
   background: var(--bg-card);
@@ -143,15 +130,31 @@ body {
   box-shadow: var(--shadow-soft);
   padding: 18px 18px 20px;
   border: 1px solid rgba(148, 163, 184, 0.25);
+  min-width: 0;
+  transition: background 0.18s ease, transform 0.12s ease,
+    border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Light hover tint + tiny lift */
+.card:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 114, 60, 0.035) 0%,
+    rgba(119, 191, 232, 0.045) 100%
+  );
+  border-color: rgba(119, 191, 232, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.10);
 }
 
 .card h3 {
   margin: 0 0 10px;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 650;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .card h3::before {
@@ -160,6 +163,7 @@ body {
   height: 18px;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--accent-gold), var(--unilag-blue));
+  flex: 0 0 auto;
 }
 
 .subtle {
@@ -172,10 +176,10 @@ body {
   margin-top: 6px;
 }
 
-/* Heading: Actions + Quick Guide Layout */
+/* Heading: Main Actions + Quick Guide */
 .home-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
   align-items: start;
   margin-bottom: 18px;
@@ -183,7 +187,7 @@ body {
 
 @media (max-width: 980px) {
   .home-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -195,16 +199,16 @@ body {
 
 @media (max-width: 900px) {
   .actions-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* Make the third card full width so it looks intentional */
+/* Make the third action card full width for balance */
 .actions-grid > .card:nth-child(3) {
   grid-column: 1 / -1;
 }
 
-/* Heading: Quick Guide Card */
+/* Heading: Quick Guide */
 .guide-card {
   padding: 12px 12px 14px;
 }
@@ -253,9 +257,10 @@ a.btn-primary {
   gap: 6px;
   white-space: nowrap;
   width: fit-content;
-  color: var(--white);
+  color: #ffffff;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.08s ease, filter 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn-primary:hover {
@@ -280,7 +285,7 @@ a.btn-primary {
   background: linear-gradient(120deg, var(--unilag-green) 0%, var(--unilag-green-dark) 100%);
 }
 
-/* Heading: Info Grid (What we do + Contact) */
+/* Heading: Lab Info Cards */
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -290,32 +295,43 @@ a.btn-primary {
 
 @media (max-width: 900px) {
   .info-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
+/* Make sure lists never cause sideways overflow */
 .service-list {
   margin: 10px 0 0;
   padding-left: 18px;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
 }
 
 .service-list li {
   margin-bottom: 8px;
 }
 
-/* Heading: Contact Block */
+.service-list strong {
+  color: var(--text-main);
+}
+
+/* Heading: Contact Card */
 .contact-block {
   margin-top: 8px;
   border-radius: 14px;
   border: 1px solid rgba(203, 213, 225, 0.9);
-  background: linear-gradient(180deg, rgba(0, 114, 60, 0.05), rgba(249, 250, 251, 0.95));
+  background: linear-gradient(
+    180deg,
+    rgba(0, 114, 60, 0.05),
+    rgba(249, 250, 251, 0.98)
+  );
   padding: 12px;
+  min-width: 0;
 }
 
+/* Desktop/tablet contact layout */
 .contact-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 110px minmax(0, 1fr);
   gap: 10px;
   padding: 8px 6px;
   border-bottom: 1px dashed rgba(148, 163, 184, 0.55);
@@ -325,17 +341,28 @@ a.btn-primary {
   border-bottom: none;
 }
 
+/* Mobile: stack label above value to avoid overflow */
+@media (max-width: 520px) {
+  .contact-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}
+
 .contact-label {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--unilag-green-dark);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .contact-value {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--text-main);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Heading: Footer */
@@ -344,5 +371,10 @@ footer {
   font-size: 0.78rem;
   color: #6b7280;
   margin: 18px auto 34px;
-  padding: 10px;
+  padding: 10px 16px;
+}
+
+/* Safety: Prevent accidental horizontal scroll */
+body {
+  overflow-x: hidden;
 }
