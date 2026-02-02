@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNILAG Concrete Laboratory</title>
 
-  <!-- Favicon / Tab icon -->
-  <!-- IMPORTANT: browsers show the image "as-is".
-       To make it appear circular, use a circular PNG with transparent corners. -->
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="favicon.png" />
   <meta name="theme-color" content="#00723c" />
@@ -17,82 +14,127 @@
 
 <body>
   <main class="container">
-
     <!-- Header -->
-    <header class="header header-row">
+    <header class="header">
       <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
 
       <div class="header-text">
         <div class="header-university">UNIVERSITY OF LAGOS</div>
         <div class="header-dept">Department of Civil &amp; Environmental Engineering</div>
         <div class="header-lab">CONCRETE LABORATORY</div>
-
       </div>
+
+      <p class="notice">
+        <strong>Welcome:</strong> Submit commercial tests, access student/research testing, or check results using your Application Number.
+      </p>
     </header>
 
-    <!-- Cards -->
-    <section class="cards-grid">
-      <!-- Commercial -->
-      <article class="card">
-        <h3>Commercial / Consultancy Testing</h3>
-        <p class="subtle">
-          For External Clients, Consultants, and Industry Submissions.
-        </p>
-        <a class="btn-primary" href="form/form.html">Submit Commercial Request</a>
-      </article>
+    <!-- Main Actions + Quick Guide -->
+    <section class="home-actions">
+      <div class="actions-grid">
+        <article class="card">
+          <h3>Commercial / Consultancy Testing</h3>
+          <p class="subtle">
+            For External Clients, Consultants, and Industry Submissions.
+          </p>
+          <a class="btn-primary btn-commercial" href="form/form.html">
+            Submit Commercial Request
+          </a>
+        </article>
 
-      <!-- Students / Research -->
-      <article class="card">
-        <h3>Student / Research Cube Testing</h3>
-        <p class="subtle">
-          For Undergraduate and Postgraduate Research Cube Tests.
-        </p>
-        <a
-          class="btn-primary outline"
-          href="https://unilagresearchconcretelab.vercel.app"
-          target="_blank"
-          rel="noopener"
-        >
-          Go to Research Portal
-        </a>
-      </article>
+        <article class="card">
+          <h3>Student / Research Cube Testing</h3>
+          <p class="subtle">
+            For Undergraduate and Postgraduate Research Cube Tests.
+          </p>
+          <a
+            class="btn-primary btn-research"
+            href="https://unilagresearchconcretelab.vercel.app"
+            target="_blank"
+            rel="noopener"
+          >
+            Go to Research Portal
+          </a>
+        </article>
 
-      <!-- Results -->
-      <article class="card">
-        <h3>Check Results</h3>
-        <p class="subtle">
-          Track Submissions Using Your Application Number.
+        <article class="card">
+          <h3>Check Results</h3>
+          <p class="subtle">
+            Track submissions using your Application Number.
+          </p>
+          <a class="btn-primary btn-results" href="results.html">
+            Check Results
+          </a>
+        </article>
+      </div>
+
+      <aside class="card guide-card">
+        <h3>Quick Guide</h3>
+
+        <ol class="guide-list">
+          <li>
+            <strong>Commercial:</strong> Click <em>Submit Commercial Request</em> and complete the form.
+          </li>
+          <li>
+            <strong>Students/Research:</strong> Click <em>Go to Research Portal</em> for research cube tests.
+          </li>
+          <li>
+            Save your <strong>Application Number</strong> after submission (needed for tracking).
+          </li>
+          <li>
+            Use <strong>Check Results</strong> to view status/results with your Application Number.
+          </li>
+        </ol>
+
+        <p class="subtle small-note guide-tip">
+          Tip: If you can’t find your Application Number, check the PDF generated at submission or your saved records.
         </p>
-        <!-- Change results.html to your real file name if different -->
-        <a class="btn-primary outline" href="results.html">Check Results</a>
-      </article>
+      </aside>
     </section>
 
-    <!-- Quick Guide card -->
-    <section class="card guide-card">
-      <h3>Quick Guide</h3>
+    <!-- Lab Info Cards -->
+    <section class="info-grid">
+      <article class="card">
+        <h3>What the UNILAG Concrete Lab Does</h3>
+        <p class="subtle">
+          We support industry and academic work through testing, design support, and practical capacity building.
+        </p>
 
-      <ol class="guide-list">
-        <li>
-          <strong>Commercial:</strong> Click <em>Submit Commercial Request</em> and complete the form.
-        </li>
-        <li>
-          <strong>Students/Research:</strong> Click <em>Go to Research Portal</em> for research cube tests.
-        </li>
-        <li>
-          Save your <strong>Application Number</strong> after submission (it’s needed for tracking).
-        </li>
-        <li>
-          Use <strong>Check Results</strong> to view the status/results with your Application Number.
-        </li>
-      </ol>
+        <ul class="service-list">
+          <li><strong>Concrete Compressive Strength Test</strong> (cube strength verification)</li>
+          <li><strong>Material Testing</strong> (cement, aggregates, and related checks)</li>
+          <li><strong>Concrete Mix Design</strong> (mix proportioning and performance targets)</li>
+          <li><strong>Training Services</strong> (hands-on lab training &amp; best practices)</li>
+        </ul>
+      </article>
 
-      <p class="subtle small-note" style="margin-top: 10px;">
-        Tip: If you can’t find your Application Number, check the PDF generated at submission or saved records.
-      </p>
+      <article class="card">
+        <h3>Location &amp; Contact</h3>
+        <div class="contact-block">
+          <div class="contact-row">
+            <span class="contact-label">Location</span>
+            <span class="contact-value">UNILAG (Akoka Campus), Lagos, Nigeria</span>
+          </div>
+
+          <div class="contact-row">
+            <span class="contact-label">Phone</span>
+            <span class="contact-value">[Add lab phone number]</span>
+          </div>
+
+          <div class="contact-row">
+            <span class="contact-label">Email</span>
+            <span class="contact-value">[Add lab email address]</span>
+          </div>
+        </div>
+
+        <p class="subtle small-note" style="margin-top: 10px;">
+          Replace the placeholders above with the official lab contact details.
+        </p>
+      </article>
     </section>
   </main>
 
+  <!-- Footer -->
   <footer>
     © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
   </footer>
