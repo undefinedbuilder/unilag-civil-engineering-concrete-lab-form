@@ -1,64 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Page metadata -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Favicon / tab icon -->
+  <link rel="icon" type="image/png" href="unilag-logo.png" />
+  <link rel="apple-touch-icon" href="unilag-logo.png" />
+  <meta name="theme-color" content="#00723c" />
+
   <title>UNILAG Concrete Laboratory</title>
+
+  <!-- Same stylesheet as the form -->
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div class="page">
+  <main class="container">
+    <!-- Same header style as the form -->
+    <header class="header">
+      <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
 
-    <!-- Header -->
-    <header class="hero">
-      <div class="brand">
-        <div class="mark" aria-hidden="true"></div>
-        <div class="brand-text">
-          <h1>UNILAG Concrete Laboratory</h1>
-          <p class="subtitle">
-            Supporting mix design, testing, and quality control for concrete research and professional services.
-          </p>
-        </div>
+      <div class="header-text">
+        <div class="header-university">UNIVERSITY OF LAGOS</div>
+        <div class="header-dept">Department of Civil &amp; Environmental Engineering</div>
+        <div class="header-lab">CONCRETE LABORATORY</div>
       </div>
+
+      <p class="notice">
+        Welcome. This portal helps you <strong>submit cube test/mix requests</strong> and
+        <strong>check results</strong> using your application number.
+      </p>
     </header>
 
-    <!-- Main -->
-    <main class="grid">
-      <!-- Card: Submission -->
+    <!-- Simple home layout -->
+    <div class="home-grid">
+      <!-- About + Quick Guide -->
       <section class="card">
-        <div class="card-head">
-          <div class="thermo" aria-hidden="true"></div>
-          <h2>Submit a Mix Request</h2>
-        </div>
-        <p class="card-text">
-          Fill the client form to submit your concrete mix details for lab processing.
+        <h3>About This Portal</h3>
+
+        <p class="home-intro">
+          The UNILAG Concrete Laboratory supports concrete testing and mix documentation for
+          research and commercial engagements. Use the two options below to submit details or
+          check outcomes.
         </p>
-        <a class="btn primary" href="form.html">Go to Form</a>
+
+        <div class="home-guide">
+          <h4 class="section-title">Quick Guide</h4>
+          <ol class="guide-list">
+            <li>
+              Click <strong>Submit a Request</strong> to complete the form and generate your application number.
+            </li>
+            <li>
+              Save your application number (e.g., <strong>UNILAG-CLR-000001</strong>).
+            </li>
+            <li>
+              Click <strong>Check Results</strong> and enter your application number to view status/results.
+            </li>
+          </ol>
+          <p class="subtle">
+            Tip: If you can’t find your application number, check the PDF generated at submission or your saved records.
+          </p>
+        </div>
       </section>
 
-      <!-- Card: Check Result -->
+      <!-- Actions -->
       <section class="card">
-        <div class="card-head">
-          <div class="thermo" aria-hidden="true"></div>
-          <h2>Check Results</h2>
+        <h3>Navigation</h3>
+
+        <div class="action-cards">
+          <div class="mini-card">
+            <h4 class="mini-title">Submit a Request</h4>
+            <p class="mini-text">
+              Fill the Client Cube Test Form and generate an application number.
+            </p>
+            <a class="btn-primary" href="form.html">Go to Form</a>
+          </div>
+
+          <div class="mini-card">
+            <h4 class="mini-title">Check Results</h4>
+            <p class="mini-text">
+              View results/status using your application number.
+            </p>
+            <!-- Change results.html if your page has a different name -->
+            <a class="btn-primary outline" href="results.html">Check Results</a>
+          </div>
         </div>
-        <p class="card-text">
-          View saved submissions or check the status/results of previously submitted mixes.
+
+        <p class="subtle small-note">
+          If your results page is not <strong>results.html</strong>, rename the link above to your actual file.
         </p>
-        <a class="btn" href="results.html">Check Results</a>
       </section>
-    </main>
+    </div>
+  </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <p>© <span id="year"></span> UNILAG Concrete Laboratory. All rights reserved.</p>
-    </footer>
-
-  </div>
-
-  <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
+  <!-- Same footer text as the form (exact line) -->
+  <footer>
+    © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
+  </footer>
 </body>
 </html>
