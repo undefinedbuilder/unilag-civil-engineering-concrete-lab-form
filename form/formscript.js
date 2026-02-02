@@ -7,7 +7,7 @@
    - Validation + data collection
    - Derived W/C + derived mix ratio display
    - LocalStorage saving + table rendering + record loading
-   - Submit to backend (/api/submit) + PDF generation (jsPDF)
+   - Submit to backend (/api/submitform) + PDF generation (jsPDF)
    - CSV export + clear all
 ----------------------------------------------------------- */
 
@@ -153,7 +153,6 @@ function getSelectedInputMode() {
 /* -----------------------------------------------------------
    OPTIONAL SAFETY:
    Clear inactive mode values when switching modes
-   (Prevents accidentally submitting both modes)
 ----------------------------------------------------------- */
 
 function clearPanelValues(panelId) {
@@ -190,7 +189,6 @@ function syncModePanels() {
   if (ratioPanel) ratioPanel.style.display = mode === "ratio" ? "" : "none";
   if (kgPanel) kgPanel.style.display = mode === "kgm3" ? "" : "none";
 
-  // Optional-only behaviour you asked for:
   // When you switch to one mode, we CLEAR the other mode's values
   if (mode === "ratio") {
     clearPanelValues("kgm3Inputs");
@@ -221,7 +219,7 @@ function syncCementTypeOther() {
 }
 
 /* -----------------------------------------------------------
-   Derived values display (W/C + Mix Ratio)
+   Derived values display (W/C & Mix Ratio)
 ----------------------------------------------------------- */
 
 function setWcBoxVisible(visible) {
@@ -434,8 +432,6 @@ function validateForm() {
 
 /* -----------------------------------------------------------
    Collect form data
-   (Because we clear inactive panel values on switch,
-    only the active mode will have data at submit time.)
 ----------------------------------------------------------- */
 
 function collectFormData() {
@@ -628,7 +624,6 @@ function loadRecordIntoForm(r) {
   if (ratioRadio) ratioRadio.checked = mode === "ratio";
   if (kgRadio) kgRadio.checked = mode === "kgm3";
 
-  // IMPORTANT:
   // We set values first, then call syncModePanels() which will clear the inactive panel.
   // That keeps the form consistent with the record's mode.
   document.getElementById("ratioCement").value = r.ratioCement ?? "1";
@@ -1003,7 +998,7 @@ async function submitForm(event) {
   let apiResult = null;
 
   try {
-    const res = await fetch("/api/submit", {
+    const res = await fetch("/api/submitform", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
