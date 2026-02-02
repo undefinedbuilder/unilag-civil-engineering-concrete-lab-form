@@ -208,7 +208,7 @@ export default async function handler(req, res) {
     const recordId = nextRecordId(lastId, prefix);
     const timestamp = new Date().toISOString();
 
-    /* Build row (no blanks; and NO duplicate WC in ratio mode) */
+    /* Build row */
     let wcRatio = 0;
     let mixRatioString = "";
     let row = [];
@@ -225,7 +225,7 @@ export default async function handler(req, res) {
       wcRatio = derived.wcRatio; // returned to frontend, but not stored as a separate column
       mixRatioString = derived.mixRatioString;
 
-      // Ratio schema (A..U) — W/C stored only once as waterCementRatio
+      // Ratio schema (A..U)
       row = [
         recordId,
         timestamp,
@@ -245,7 +245,7 @@ export default async function handler(req, res) {
         body.ratioCement ?? 1,
         body.ratioFine,
         body.ratioCoarse,
-        body.waterCementRatio, // W/C stored once
+        body.waterCementRatio,
         mixRatioString,
         body.notes || "",
       ];
@@ -256,7 +256,7 @@ export default async function handler(req, res) {
       wcRatio = derived.wcRatio;
       mixRatioString = derived.mixRatioString;
 
-      // kg/m³ schema (A..V) — W/C is truly derived
+      // kg/m³ schema (A..V)
       row = [
         recordId,
         timestamp,
