@@ -998,7 +998,7 @@ async function submitForm(event) {
   let apiResult = null;
 
   try {
-    const res = await fetch("form/api/submitform", {
+    const res = await fetch("form/api/submitform.js", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
