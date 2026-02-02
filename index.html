@@ -3,86 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>UNILAG Concrete Laboratory</title>
 
-  <!-- Favicon (use a circular PNG for best look) -->
+  <!-- Favicon / Tab icon -->
+  <!-- IMPORTANT: browsers show the image "as-is".
+       To make it appear circular, use a circular PNG with transparent corners. -->
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="favicon.png" />
+  <meta name="theme-color" content="#00723c" />
 
-  <!-- Same stylesheet used by the form -->
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <main class="container">
 
-    <!-- Header (same visual style, not same IDs) -->
-    <header class="header">
+    <!-- Header -->
+    <header class="header header-row">
       <img src="unilag-logo.png" class="logo" alt="UNILAG Logo" />
 
       <div class="header-text">
         <div class="header-university">UNIVERSITY OF LAGOS</div>
         <div class="header-dept">Department of Civil &amp; Environmental Engineering</div>
         <div class="header-lab">CONCRETE LABORATORY</div>
-      </div>
 
-      <p class="notice">
-        This portal routes concrete cube submissions for
-        <strong>commercial</strong> and <strong>research (student)</strong> testing.
-      </p>
+        <p class="notice" style="margin-top: 10px;">
+          Choose a route below: Commercial submissions, Student/Research cube testing, or Results tracking.
+        </p>
+      </div>
     </header>
 
-    <!-- Main content -->
-    <section class="main-grid">
-
-      <!-- About + Quick Guide -->
-      <div class="card">
-        <h3>About the Laboratory</h3>
-
+    <!-- Cards -->
+    <section class="cards-grid">
+      <!-- Commercial -->
+      <article class="card">
+        <h3>Commercial / Consultancy Testing</h3>
         <p class="subtle">
-          The UNILAG Concrete Laboratory provides facilities for concrete mix design,
-          cube testing, and documentation for both professional practice and academic research.
+          For external clients, consultants, and industry submissions.
         </p>
+        <a class="btn-primary" href="form.html">Submit Commercial Request</a>
+      </article>
 
-        <div class="section-title">Quick Guide</div>
-        <ol class="subtle" style="margin: 8px 0 0 18px;">
-          <li>
-            <strong>Commercial / consultancy tests:</strong>
-            use the main submission form.
-          </li>
-          <li>
-            <strong>Students &amp; research cube tests:</strong>
-            use the research portal.
-          </li>
-          <li>
-            Always save your <strong>Application Number</strong> to track results.
-          </li>
-        </ol>
-
-        <p class="subtle" style="margin-top: 10px;">
-          Choosing the correct route ensures faster processing and proper record keeping.
-        </p>
-      </div>
-
-      <!-- Navigation / Routing -->
-      <div class="card">
-        <h3>Choose a Route</h3>
-
-        <!-- Commercial -->
-        <div class="section-title">Commercial / Consultancy Testing</div>
-        <p class="subtle" style="margin-top: 6px;">
-          For industry partners, consultants, and non-student submissions.
-        </p>
-        <a class="btn-primary" href="form.html">
-          Submit Commercial Request
-        </a>
-
-        <!-- Research -->
-        <div class="section-title" style="margin-top: 16px;">
-          Student / Research Cube Testing
-        </div>
-        <p class="subtle" style="margin-top: 6px;">
+      <!-- Students / Research -->
+      <article class="card">
+        <h3>Student / Research Cube Testing</h3>
+        <p class="subtle">
           For undergraduate and postgraduate research cube tests.
         </p>
         <a
@@ -93,24 +58,44 @@
         >
           Go to Research Portal
         </a>
+      </article>
 
-        <!-- Results -->
-        <div class="section-title" style="margin-top: 16px;">
-          Check Results
-        </div>
-        <p class="subtle" style="margin-top: 6px;">
+      <!-- Results -->
+      <article class="card">
+        <h3>Check Results</h3>
+        <p class="subtle">
           Track submissions using your application number.
         </p>
-        <!-- Rename if your file is different -->
-        <a class="btn-primary outline" href="results.html">
-          Check Results
-        </a>
-      </div>
+        <!-- Change results.html to your real file name if different -->
+        <a class="btn-primary outline" href="results.html">Check Results</a>
+      </article>
+    </section>
 
+    <!-- Quick Guide card -->
+    <section class="card guide-card">
+      <h3>Quick Guide</h3>
+
+      <ol class="guide-list">
+        <li>
+          <strong>Commercial:</strong> Click <em>Submit Commercial Request</em> and complete the form.
+        </li>
+        <li>
+          <strong>Students/Research:</strong> Click <em>Go to Research Portal</em> for research cube tests.
+        </li>
+        <li>
+          Save your <strong>Application Number</strong> after submission (it’s needed for tracking).
+        </li>
+        <li>
+          Use <strong>Check Results</strong> to view the status/results with your Application Number.
+        </li>
+      </ol>
+
+      <p class="subtle small-note" style="margin-top: 10px;">
+        Tip: If you can’t find your Application Number, check the PDF generated at submission or saved records.
+      </p>
     </section>
   </main>
 
-  <!-- EXACT same footer as the form -->
   <footer>
     © 2025 Designed by Jesuto Ilugbo for The Concrete Laboratory, University of Lagos.
   </footer>
