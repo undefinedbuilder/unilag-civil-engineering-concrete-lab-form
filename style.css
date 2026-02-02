@@ -1,11 +1,13 @@
 /* ==============================
-   BASE THEME
+   UNILAG CONCRETE LAB — HOMEPAGE ONLY
+   (For the index.html you pasted)
    ============================== */
 
 :root {
   --unilag-green: #00723c;
   --unilag-green-dark: #004c27;
   --unilag-blue: #77bfe8;
+  --unilag-blue-soft: #e5f3fb;
   --accent-gold: #f1b21c;
   --danger: #c62828;
 
@@ -15,31 +17,77 @@
   --border-soft: #d1d5db;
   --bg-main: #f3f4f6;
   --bg-card: #ffffff;
-  --shadow-soft: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
 
-  --radius: 18px;
+  --white: #ffffff;
+  --gray-soft: #f9fafb;
+
+  --radius-lg: 18px;
   --radius-pill: 999px;
 }
 
-/* ==============================
-   GLOBAL
-   ============================== */
-
-* {
+/* Reset */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
-  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
-  background: var(--bg-main);
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
   color: var(--text-main);
-  line-height: 1.4;
+  background: radial-gradient(
+    circle at top,
+    #ebf5ff 0,
+    #f9fafb 40%,
+    var(--bg-main) 100%
+  );
+  min-height: 100%;
 }
 
+body {
+  line-height: 1.5;
+}
+
+/* ==============================
+   LAYOUT
+   ============================== */
+
 .container {
-  width: min(1100px, 94%);
-  margin: 28px auto;
+  max-width: 1100px;
+  margin: 32px auto 28px;
+  padding: 0 16px;
+}
+
+/* The big split: Quick Guide left, cards right */
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 2.45fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Action cards on the right */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ==============================
@@ -48,201 +96,218 @@ body {
 
 .header {
   background: linear-gradient(
-    135deg,
-    rgba(0, 114, 60, 0.16),
-    rgba(119, 191, 232, 0.14)
+    120deg,
+    var(--unilag-green) 0%,
+    #005885 50%,
+    #003f5f 100%
   );
-  border: 1px solid rgba(0, 114, 60, 0.14);
-  border-radius: var(--radius);
-  padding: 18px 18px 14px;
+  color: #f9fafb;
+  padding: 16px 20px 14px;
+  border-radius: 24px;
   box-shadow: var(--shadow-soft);
-  margin-bottom: 18px;
-}
-
-/* logo + text side by side */
-.header-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -60px auto;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 60%);
+  opacity: 0.9;
 }
 
 .logo {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: auto;
   border-radius: 999px;
-  border: 2px solid rgba(0, 114, 60, 0.35);
-  background: #fff;
-  object-fit: cover;
-  flex: 0 0 auto;
+  background: var(--white);
+  padding: 8px;
+  box-shadow: 0 0 0 2px rgba(248, 250, 252, 0.5);
+  z-index: 1;
+  flex-shrink: 0;
 }
 
 .header-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  gap: 2px;
+  z-index: 1;
 }
 
 .header-university {
-  font-weight: 800;
+  font-size: 1.05rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
-  font-size: 0.85rem;
-  color: var(--unilag-green-dark);
   text-transform: uppercase;
 }
 
 .header-dept {
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: #0f172a;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  opacity: 0.95;
 }
 
 .header-lab {
-  font-weight: 900;
-  font-size: 1.25rem;
-  letter-spacing: 0.03em;
-  color: var(--unilag-green);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 /* ==============================
-   CARDS GRID
-   ============================== */
-
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  align-items: stretch;
-}
-
-@media (max-width: 980px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .header-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .logo {
-    width: 64px;
-    height: 64px;
-  }
-}
-
-/* ==============================
-   CARD + THERMOMETER HEADINGS
+   CARDS
    ============================== */
 
 .card {
   background: var(--bg-card);
-  border: 1px solid rgba(209, 213, 219, 0.9);
-  border-radius: var(--radius);
-  padding: 16px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
+  padding: 18px 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .card h3 {
   margin: 0 0 10px;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--unilag-green-dark);
-  position: relative;
-  padding-left: 18px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Thermometer / bar accent beside headings */
 .card h3::before {
   content: "";
-  position: absolute;
-  left: 0;
-  top: 4px;
-  width: 8px;
-  height: 24px;
+  width: 6px;
+  height: 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--unilag-green), #005885);
-}
-
-/* Optional bulb effect (subtle) */
-.card h3::after {
-  content: "";
-  position: absolute;
-  left: -3px;
-  top: 24px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: rgba(0, 114, 60, 0.25);
-  filter: blur(0.2px);
+  background: linear-gradient(180deg, var(--accent-gold), var(--unilag-blue));
 }
 
 .subtle {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
+  margin: 2px 0 10px;
 }
 
 .small-note {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Quick Guide on the left (smaller + calmer) */
+.guide-card {
+  padding: 14px 14px 16px;
+}
+
+.guide-card h3 {
+  font-size: 0.98rem;
+}
+
+.guide-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.83rem;
+  color: var(--text-main);
+}
+
+.guide-list li {
+  margin-bottom: 8px;
+}
+
+.guide-card em {
+  font-style: normal;
+  font-weight: 650;
+  color: var(--unilag-green-dark);
+}
+
+.guide-card strong {
+  color: var(--text-main);
+}
+
+.guide-card .small-note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.6);
 }
 
 /* ==============================
-   BUTTONS
+   BUTTONS (3 themed variants)
    ============================== */
 
+a.btn-primary {
+  text-decoration: none;
+}
+
 .btn-primary {
+  border-radius: var(--radius-pill);
+  padding: 10px 14px;
+  font-size: 0.86rem;
+  border: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin-top: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(0, 114, 60, 0.45);
-  background: linear-gradient(120deg, var(--unilag-green) 0%, #005885 100%);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 0.9rem;
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.12s ease, filter 0.12s ease;
-  width: 100%;
+  gap: 6px;
+  white-space: nowrap;
+  width: fit-content;
+  color: var(--white);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary:hover {
+  filter: brightness(1.05);
   transform: translateY(-1px);
-  filter: brightness(1.03);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
 }
 
 .btn-primary:active {
   transform: translateY(0);
 }
 
+/* Default button look (used by the first card) */
+.btn-primary {
+  background: linear-gradient(120deg, var(--unilag-green) 0%, #005885 100%);
+}
+
+/* For your existing "outline" class in HTML, we keep it usable */
 .btn-primary.outline {
   background: transparent;
-  color: var(--unilag-green-dark);
-  border: 1px solid rgba(0, 114, 60, 0.35);
+  color: var(--unilag-green);
+  border: 1px solid rgba(0, 114, 60, 0.45);
+  box-shadow: none;
+}
+
+.btn-primary.outline:hover {
+  background: rgba(0, 114, 60, 0.06);
+  filter: none;
 }
 
 /* ==============================
-   QUICK GUIDE CARD
+   Thematic colour rhyme:
+   - Commercial = gold → green (priority/action)
+   - Research   = blue → green (academic/tech)
+   - Results    = green → deep green (official/verification)
    ============================== */
 
-.guide-card {
-  margin-top: 18px;
+/* We target the 3 buttons by their card order so you don't have to change HTML */
+.cards-grid .card:nth-child(1) .btn-primary {
+  background: linear-gradient(120deg, var(--accent-gold) 0%, var(--unilag-green) 100%);
 }
 
-.guide-list {
-  margin: 8px 0 0 18px;
-  padding: 0;
-  color: var(--text-main);
-  font-size: 0.92rem;
+.cards-grid .card:nth-child(2) .btn-primary {
+  background: linear-gradient(120deg, #005885 0%, var(--unilag-green) 100%);
 }
 
-.guide-list li {
-  margin: 8px 0;
+.cards-grid .card:nth-child(3) .btn-primary {
+  background: linear-gradient(120deg, var(--unilag-green) 0%, var(--unilag-green-dark) 100%);
 }
 
 /* ==============================
@@ -253,6 +318,6 @@ footer {
   text-align: center;
   font-size: 0.78rem;
   color: #6b7280;
-  margin: 20px auto 40px;
+  margin: 18px auto 34px;
   padding: 10px;
 }
