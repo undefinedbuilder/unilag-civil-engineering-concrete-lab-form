@@ -1,8 +1,4 @@
-/* ==============================
-   UNILAG CONCRETE LAB — HOMEPAGE ONLY
-   (For the index.html you pasted)
-   ============================== */
-
+/* Heading: Theme Variables */
 :root {
   --unilag-green: #00723c;
   --unilag-green-dark: #004c27;
@@ -26,7 +22,7 @@
   --radius-pill: 999px;
 }
 
-/* Reset */
+/* Heading: Base Reset */
 *,
 *::before,
 *::after {
@@ -53,47 +49,14 @@ body {
   line-height: 1.5;
 }
 
-/* ==============================
-   LAYOUT
-   ============================== */
-
+/* Heading: Layout */
 .container {
   max-width: 1100px;
   margin: 32px auto 28px;
   padding: 0 16px;
 }
 
-/* The big split: Quick Guide left, cards right */
-.home-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 2.45fr);
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 900px) {
-  .home-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Action cards on the right */
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-@media (max-width: 900px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ==============================
-   HEADER
-   ============================== */
-
+/* Heading: Header */
 .header {
   background: linear-gradient(
     120deg,
@@ -162,10 +125,18 @@ body {
   letter-spacing: 0.08em;
 }
 
-/* ==============================
-   CARDS
-   ============================== */
+.notice {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  background: rgba(248, 250, 252, 0.14);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 250, 252, 0.35);
+  z-index: 1;
+}
 
+/* Heading: Cards */
 .card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -201,9 +172,41 @@ body {
   margin-top: 6px;
 }
 
-/* Quick Guide on the left (smaller + calmer) */
+/* Heading: Actions + Quick Guide Layout */
+.home-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 980px) {
+  .home-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Make the third card full width so it looks intentional */
+.actions-grid > .card:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* Heading: Quick Guide Card */
 .guide-card {
-  padding: 14px 14px 16px;
+  padding: 12px 12px 14px;
 }
 
 .guide-card h3 {
@@ -213,7 +216,7 @@ body {
 .guide-list {
   margin: 8px 0 0;
   padding-left: 18px;
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   color: var(--text-main);
 }
 
@@ -227,20 +230,13 @@ body {
   color: var(--unilag-green-dark);
 }
 
-.guide-card strong {
-  color: var(--text-main);
-}
-
-.guide-card .small-note {
+.guide-tip {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed rgba(148, 163, 184, 0.6);
 }
 
-/* ==============================
-   BUTTONS (3 themed variants)
-   ============================== */
-
+/* Heading: Buttons */
 a.btn-primary {
   text-decoration: none;
 }
@@ -272,48 +268,77 @@ a.btn-primary {
   transform: translateY(0);
 }
 
-/* Default button look (used by the first card) */
-.btn-primary {
-  background: linear-gradient(120deg, var(--unilag-green) 0%, #005885 100%);
-}
-
-/* For your existing "outline" class in HTML, we keep it usable */
-.btn-primary.outline {
-  background: transparent;
-  color: var(--unilag-green);
-  border: 1px solid rgba(0, 114, 60, 0.45);
-  box-shadow: none;
-}
-
-.btn-primary.outline:hover {
-  background: rgba(0, 114, 60, 0.06);
-  filter: none;
-}
-
-/* ==============================
-   Thematic colour rhyme:
-   - Commercial = gold → green (priority/action)
-   - Research   = blue → green (academic/tech)
-   - Results    = green → deep green (official/verification)
-   ============================== */
-
-/* We target the 3 buttons by their card order so you don't have to change HTML */
-.cards-grid .card:nth-child(1) .btn-primary {
+.btn-commercial {
   background: linear-gradient(120deg, var(--accent-gold) 0%, var(--unilag-green) 100%);
 }
 
-.cards-grid .card:nth-child(2) .btn-primary {
+.btn-research {
   background: linear-gradient(120deg, #005885 0%, var(--unilag-green) 100%);
 }
 
-.cards-grid .card:nth-child(3) .btn-primary {
+.btn-results {
   background: linear-gradient(120deg, var(--unilag-green) 0%, var(--unilag-green-dark) 100%);
 }
 
-/* ==============================
-   FOOTER
-   ============================== */
+/* Heading: Info Grid (What we do + Contact) */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 6px;
+}
 
+@media (max-width: 900px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.service-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+
+.service-list li {
+  margin-bottom: 8px;
+}
+
+/* Heading: Contact Block */
+.contact-block {
+  margin-top: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: linear-gradient(180deg, rgba(0, 114, 60, 0.05), rgba(249, 250, 251, 0.95));
+  padding: 12px;
+}
+
+.contact-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  padding: 8px 6px;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.55);
+}
+
+.contact-row:last-child {
+  border-bottom: none;
+}
+
+.contact-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--unilag-green-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.contact-value {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+/* Heading: Footer */
 footer {
   text-align: center;
   font-size: 0.78rem;
