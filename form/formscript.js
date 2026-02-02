@@ -992,7 +992,7 @@ async function submitForm(event) {
   const data = collectFormData();
 
   if (!logoImageDataUrl) {
-    logoImageDataUrl = await loadImageAsDataURL("unilag-logo.png");
+    logoImageDataUrl = await loadImageAsDataURL("../unilag-logo.png");
   }
 
   let apiResult = null;
