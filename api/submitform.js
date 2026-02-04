@@ -63,16 +63,24 @@ function computeFromKgm3(c, w, f, co) {
 }
 
 /* Read last record ID from Column A of a given sheet */
-async function getLastRecordId(sheets, spreadsheetId, sheetName) {
+async function getLastRecordId(sheets, spreadsheetId, sheetName, prefix) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${sheetName}!A:A`,
   });
 
   const rows = res.data.values || [];
+  const re = prefix ? new RegExp(`^${prefix}-(\\d{6})$`) : null;
+
   for (let i = rows.length - 1; i >= 0; i--) {
     const cell = rows[i]?.[0];
-    if (cell && String(cell).trim()) return String(cell).trim();
+    if (!cell) continue;
+
+    const v = String(cell).trim();
+    if (!v) continue;
+
+    if (!re) return v;
+    if (re.test(v)) return v;
   }
   return null;
 }
@@ -204,7 +212,7 @@ export default async function handler(req, res) {
     const prefix = inputMode === "kgm3" ? "UNILAG-CLK" : "UNILAG-CLR";
 
     /* Generate application number based on destination sheet */
-    const lastId = await getLastRecordId(sheets, spreadsheetId, sheetName);
+    const lastId = await getLastRecordId(sheets, spreadsheetId, sheetName, prefix);
     const recordId = nextRecordId(lastId, prefix);
     const timestamp = new Date().toISOString();
 
