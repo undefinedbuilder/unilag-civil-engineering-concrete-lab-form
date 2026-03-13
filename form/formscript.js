@@ -151,7 +151,6 @@ function getSelectedInputMode() {
 }
 
 /* -----------------------------------------------------------
-   OPTIONAL SAFETY:
    Clear inactive mode values when switching modes
 ----------------------------------------------------------- */
 
